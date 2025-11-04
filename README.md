@@ -1,35 +1,30 @@
-# CARLA Multi-Architecture Docker
+# CARLA Docker for x86_64 and Jetson Orin
 
-Plug-and-play CARLA simulator for x86_64 and ARM64 (Jetson Orin) with direct display support and Logitech wheel controller integration.
+Docker setup for CARLA simulator with display support and Logitech wheel integration.
 
-[![Build Multi-Arch Docker Images](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/docker-build.yml/badge.svg)](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/docker-build.yml)
+[![Build](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/docker-build.yml/badge.svg)](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/docker-build.yml)
 [![Release](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/release.yml/badge.svg)](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/release.yml)
 
-## Features
+## What This Project Provides
 
-- **Multi-Architecture**: Runs on x86_64 (ARM64/Jetson Orin support in progress)
-- **Direct Display**: Native X11/Wayland support (no remote desktop)
-- **GPU Accelerated**: NVIDIA GPU support
-- **Controller Support**: Logitech G27/G29/G920 wheels out-of-the-box
-- **Easy Configuration**: Interactive configuration helper
-- **GitHub Actions**: Automated builds
+### ✅ For x86_64 (Desktop/Server)
+- **CARLA 0.9.15** full simulator in Docker
+- Direct display support (X11/Wayland)
+- GPU acceleration with NVIDIA runtime
+- Logitech wheel support (G27/G29/G920)
+- Easy deployment with docker-compose
 
-> ⚠️ **Note**: ARM64/Jetson Orin support requires CARLA built from source. See [ARM64_STATUS.md](ARM64_STATUS.md) for details.
+### ✅ For Jetson Orin (ARM64)
+- **CARLA Python client** in Docker
+- Connects to x86 CARLA server over network
+- Run perception/planning algorithms
+- Proven client-server architecture
+
+> **Note:** Jetson cannot run full CARLA simulator (Unreal Engine not available for ARM64). Use client-server setup instead. See [Why ARM64 Native Build Doesn't Work](#why-arm64-native-build-doesnt-work).
 
 ## Quick Start
 
-### Prerequisites
-
-- Docker 20.10+
-- Docker Compose v2+
-- NVIDIA GPU with drivers
-- NVIDIA Container Toolkit
-
-**For Jetson Orin:**
-- JetPack 5.0+
-- NVIDIA Container Runtime
-
-### Using Docker Compose (Recommended)
+### x86_64 Desktop/Server
 
 ```bash
 # Clone repository
@@ -38,7 +33,6 @@ cd carla-multiarch-docker
 
 # Setup environment
 cp .env.example .env
-# Edit .env for your platform
 
 # Allow Docker to access display
 xhost +local:docker
@@ -50,35 +44,37 @@ docker compose up -d
 docker compose logs -f carla
 ```
 
-### Using Pre-built Images
+### Jetson Orin (Client Mode)
+
+**Requirements:** x86 server running CARLA (see above)
 
 ```bash
-# Pull image from GitHub Container Registry
-docker pull ghcr.io/tri2510/carla-multiarch-docker:latest
+# Clone on Jetson
+git clone https://github.com/tri2510/carla-multiarch-docker.git
+cd carla-multiarch-docker
 
-# Run with display and GPU support
-docker run --rm -it \
-  --runtime=nvidia \
-  --gpus all \
-  -e DISPLAY=$DISPLAY \
-  -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-  -v /dev/input:/dev/input:rw \
-  -p 2000:2000 \
-  ghcr.io/tri2510/carla-multiarch-docker:latest
+# Configure server connection
+cp examples/.env.jetson .env.jetson
+nano .env.jetson  # Set CARLA_SERVER_HOST to x86 IP
+
+# Build and start client
+docker build -f Dockerfile.jetson-client -t carla-jetson-client:latest .
+docker compose -f docker-compose.jetson-client.yml up -d
+
+# Test connection
+docker compose -f docker-compose.jetson-client.yml exec carla-client \
+  python3 /workspace/test_connection.py
 ```
+
+See [docs/JETSON_CLIENT.md](docs/JETSON_CLIENT.md) for complete Jetson setup guide.
 
 ## Configuration
 
-### Environment Variables
-
-Edit `.env` file to configure CARLA:
+Edit `.env` file:
 
 ```bash
 # Display
 DISPLAY=:0
-
-# Platform (auto-detected)
-TARGETPLATFORM=linux/amd64  # or linux/arm64
 
 # Graphics Quality
 CARLA_QUALITY=Epic          # Low, Medium, High, Epic
@@ -94,35 +90,11 @@ CONTROLLER_TYPE=g29         # g27, g29, g920, driving_force_gt
 FORCE_FEEDBACK=true
 ```
 
-### Recommended Settings
-
-**x86_64 Desktop (High-end GPU):**
-```bash
-CARLA_QUALITY=Epic
-CARLA_RES_X=1920
-CARLA_RES_Y=1080
-```
-
-**Jetson Orin AGX:**
-```bash
-CARLA_QUALITY=Medium
-CARLA_RES_X=1280
-CARLA_RES_Y=720
-```
-
-**Jetson Orin Nano/NX:**
-```bash
-CARLA_QUALITY=Low
-CARLA_RES_X=1280
-CARLA_RES_Y=720
-```
-
 ## Usage Examples
 
-### Manual Control with Wheel
+### Manual Control with Logitech Wheel
 
 ```bash
-# Start manual control with Logitech wheel
 docker compose exec carla python3 /home/carla/scripts/manual_control_wheel.py
 ```
 
@@ -131,10 +103,9 @@ docker compose exec carla python3 /home/carla/scripts/manual_control_wheel.py
 - Right Pedal → Throttle
 - Middle Pedal → Brake
 - Left Pedal → Clutch
-- Button 6 → Reverse
-- Button 7 → Handbrake
+- ESC/Q → Quit
 
-### Python API
+### Python API Examples
 
 ```bash
 # Enter container
@@ -142,15 +113,11 @@ docker compose exec carla bash
 
 # Run examples
 cd /home/carla/PythonAPI/examples
-
-# Generate traffic
 python3 generate_traffic.py -n 50
-
-# Dynamic weather
 python3 dynamic_weather.py
 ```
 
-### Custom Script
+### Custom Python Script
 
 ```python
 import carla
@@ -169,65 +136,35 @@ vehicle = world.spawn_actor(vehicle_bp, spawn_point)
 print(f"Spawned {vehicle.type_id}")
 ```
 
-## Jetson Orin Setup
+## Architecture
 
-### Initial Setup
+### x86_64 Standalone
 
-```bash
-# Set maximum performance mode
-sudo nvpmodel -m 0
-sudo jetson_clocks
-
-# Verify GPU
-nvidia-smi
-
-# Check Jetson info
-cat /etc/nv_tegra_release
+```
+┌────────────────────────┐
+│   x86_64 Desktop       │
+│   ┌──────────────────┐ │
+│   │ CARLA Simulator  │ │
+│   │ - Full features  │ │
+│   │ - Direct display │ │
+│   │ - GPU rendering  │ │
+│   └──────────────────┘ │
+└────────────────────────┘
 ```
 
-### Display Configuration
+### Client-Server (with Jetson)
 
-For best results, use X11 instead of Wayland:
-
-```bash
-# Edit GDM3 config
-sudo nano /etc/gdm3/custom.conf
-
-# Uncomment:
-# WaylandEnable=false
-
-# Restart display manager
-sudo systemctl restart gdm3
 ```
-
-See [JETSON_SETUP.md](JETSON_SETUP.md) for detailed setup guide.
-
-## Building from Source
-
-### Local Build
-
-```bash
-# Build for current platform
-./build.sh --platform linux/amd64
-
-# Build for ARM64
-./build.sh --platform linux/arm64
-
-# Build for both platforms
-./build.sh
-```
-
-### GitHub Actions
-
-Images are automatically built on:
-- Push to `main` or `develop` branches
-- Pull requests
-- Release tags (`v*.*.*`)
-
-Built images are available at:
-```
-ghcr.io/tri2510/carla-multiarch-docker:latest
-ghcr.io/tri2510/carla-multiarch-docker:v1.0.0
+┌─────────────────────┐         ┌──────────────────┐
+│  x86_64 Server      │ Network │  Jetson Orin     │
+│  ┌───────────────┐  │◄───────►│  ┌────────────┐  │
+│  │ CARLA Server  │  │ 1Gbps   │  │   Client   │  │
+│  │ - Rendering   │  │         │  │ - Control  │  │
+│  │ - Physics     │  │         │  │ - Sensors  │  │
+│  │ - Simulation  │  │         │  │ - Planning │  │
+│  └───────────────┘  │         │  └────────────┘  │
+│  GPU: RTX 2070+     │         │  GPU: Jetson     │
+└─────────────────────┘         └──────────────────┘
 ```
 
 ## Troubleshooting
@@ -238,10 +175,10 @@ ghcr.io/tri2510/carla-multiarch-docker:v1.0.0
 # Allow Docker to access display
 xhost +local:docker
 
-# Check display variable
+# Check display
 echo $DISPLAY
 
-# Verify X11 is running
+# Verify X11
 ps aux | grep X
 ```
 
@@ -251,9 +188,6 @@ ps aux | grep X
 # Check USB devices
 lsusb | grep -i logitech
 
-# List input devices
-ls -la /dev/input/
-
 # Set permissions
 sudo chmod a+rw /dev/input/*
 ```
@@ -261,13 +195,13 @@ sudo chmod a+rw /dev/input/*
 ### GPU Not Working
 
 ```bash
-# Verify NVIDIA driver
+# Check NVIDIA driver
 nvidia-smi
 
 # Check Docker runtime
 docker info | grep -i runtime
 
-# Test GPU in container
+# Test in container
 docker compose exec carla nvidia-smi
 ```
 
@@ -279,77 +213,80 @@ CARLA_QUALITY=Low
 CARLA_RES_X=1280
 CARLA_RES_Y=720
 
-# For Jetson, enable max performance
-sudo nvpmodel -m 0
-sudo jetson_clocks
-
-# Restart container
+# Restart
 docker compose restart carla
 ```
+
+## Why ARM64 Native Build Doesn't Work
+
+**CARLA cannot run natively on Jetson Orin because:**
+
+1. **Unreal Engine 4.26** - Cannot be compiled for ARM64
+2. **No ARM64 binaries** - CARLA doesn't provide ARM builds
+3. **Community attempts failed** - See [docs/RESEARCH_ARM64.md](docs/RESEARCH_ARM64.md)
+
+**Solution:** Use client-server architecture (proven by Autoware community)
 
 ## Project Structure
 
 ```
 .
-├── .github/
-│   └── workflows/
-│       ├── docker-build.yml    # Multi-arch build workflow
-│       └── release.yml         # Release workflow
+├── Dockerfile                      # x86_64 CARLA server
+├── Dockerfile.jetson-client        # ARM64 Python client
+├── docker-compose.yml              # x86 deployment
+├── docker-compose.jetson-client.yml# Jetson deployment
 ├── scripts/
-│   ├── start-carla.sh          # CARLA startup script
-│   ├── setup-display.sh        # Display configuration
-│   ├── setup-controller.sh     # Controller setup
-│   ├── carla-config.py         # Configuration helper
-│   └── manual_control_wheel.py # Wheel control example
-├── Dockerfile                  # Multi-arch Dockerfile
-├── docker-compose.yml          # Docker Compose config
-├── .env.example                # Environment template
-├── build.sh                    # Build script
-├── quickstart.sh               # Quick start script
-└── README.md                   # This file
+│   ├── start-carla.sh              # Startup script
+│   ├── setup-display.sh            # Display setup
+│   ├── setup-controller.sh         # Controller setup
+│   └── manual_control_wheel.py     # Wheel control
+├── examples/
+│   └── jetson_client_example.py    # Jetson example
+└── README.md                       # This file
 ```
 
-## Architecture
+## Documentation
 
-The Dockerfile uses multi-stage builds:
+- [docs/QUICKSTART.md](docs/QUICKSTART.md) - Quick start guide
+- [docs/JETSON_CLIENT.md](docs/JETSON_CLIENT.md) - Complete Jetson setup
+- [docs/JETSON_SETUP.md](docs/JETSON_SETUP.md) - Jetson Orin configuration
+- [docs/RESEARCH_ARM64.md](docs/RESEARCH_ARM64.md) - Why ARM64 native build doesn't work
+- [docs/ARM64_STATUS.md](docs/ARM64_STATUS.md) - Current ARM64 status
 
-1. **Base stage**: Common dependencies for all platforms
-2. **Platform-specific stages**:
-   - `carla-amd64`: x86_64 with official CARLA binaries
-   - `carla-arm64`: ARM64 optimized for Jetson Orin
-3. **Final stage**: Selected based on target platform
+## Supported Versions
 
-GitHub Actions automatically builds both architectures and pushes to container registry.
+- **CARLA:** 0.9.15
+- **Python:** 3.8+
+- **Docker:** 20.10+
+- **NVIDIA Driver:** 470+
 
-## Supported CARLA Version
+## Requirements
 
-- **CARLA 0.9.15** (x86_64) - ✅ Fully supported
-- **CARLA 0.9.15** (ARM64) - ⚠️ Requires manual build (see [ARM64_STATUS.md](ARM64_STATUS.md))
+### x86_64
+- Ubuntu 20.04/22.04
+- NVIDIA GPU (GTX 1060 or better)
+- 16GB+ RAM
+- NVIDIA Container Toolkit
+
+### Jetson Orin
+- JetPack 5.0+
+- Network connection to x86 CARLA server
+- 8GB+ RAM
 
 ## License
 
-This project follows CARLA's MIT License.
+MIT License - Same as CARLA simulator
 
 ## Contributing
 
-Issues and pull requests are welcome!
+Issues and pull requests welcome!
 
 ## Resources
 
 - [CARLA Documentation](https://carla.readthedocs.io/)
 - [CARLA Python API](https://carla.readthedocs.io/en/latest/python_api/)
-- [Jetson Developer Zone](https://developer.nvidia.com/embedded/jetson-orin)
-- [JETSON_SETUP.md](JETSON_SETUP.md) - Detailed Jetson setup guide
-- [QUICKSTART.md](QUICKSTART.md) - Quick start guide
-
-## Support
-
-For issues, please open a GitHub issue with:
-- Platform (x86_64 or Jetson Orin model)
-- Docker version
-- GPU information
-- Error logs
+- [Docker Multi-Platform](https://docs.docker.com/build/building/multi-platform/)
 
 ---
 
-Built with multi-architecture support for autonomous driving development.
+**Built for autonomous driving development**
