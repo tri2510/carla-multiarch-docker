@@ -147,12 +147,12 @@ CARLA_RES_Y=720
 ### Display not working?
 ```bash
 xhost +local:docker
-./scripts/setup-display.sh
+./container_scripts/setup-display.sh
 ```
 
 ### Controller not detected?
 ```bash
-./scripts/setup-controller.sh
+./container_scripts/setup-controller.sh
 sudo chmod a+rw /dev/input/*
 ```
 
@@ -208,6 +208,8 @@ Check the full documentation:
 ├── quickstart.sh             # This quick start
 ├── build.sh                  # Build script
 ├── scripts/
+│   └── run-local-carla.sh    # Local control wrapper
+├── container_scripts/
 │   ├── start-carla.sh        # Startup script
 │   ├── setup-display.sh      # Display setup
 │   ├── setup-controller.sh   # Controller setup

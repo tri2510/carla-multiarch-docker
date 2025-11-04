@@ -92,14 +92,14 @@ fi
 # Setup display
 echo ""
 echo "Setting up display..."
-./scripts/setup-display.sh
+./container_scripts/setup-display.sh
 
 # Setup controller (optional)
 echo ""
 read -p "Do you want to setup Logitech wheel controller? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    ./scripts/setup-controller.sh
+    ./container_scripts/setup-controller.sh
 fi
 
 # Build option

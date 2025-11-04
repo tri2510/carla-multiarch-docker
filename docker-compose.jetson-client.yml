@@ -32,7 +32,7 @@ services:
     volumes:
       # Mount your code/scripts
       - ./examples:/workspace/examples:ro
-      - ./scripts:/workspace/scripts:ro
+      - ./container_scripts:/workspace/scripts:ro
 
       # Data directories
       - ./data:/workspace/data:rw

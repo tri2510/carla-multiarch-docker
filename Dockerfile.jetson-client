@@ -43,7 +43,7 @@ WORKDIR /workspace
 
 # Copy client examples
 COPY examples/ /workspace/examples/
-COPY scripts/carla-config.py /workspace/scripts/
+COPY container_scripts/carla-config.py /workspace/scripts/
 
 # Test script for connection
 RUN echo '#!/usr/bin/env python3\n\

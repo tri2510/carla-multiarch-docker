@@ -46,6 +46,26 @@ docker compose up -d
 docker compose logs -f carla
 ```
 
+### Helper Wrapper (Direct Run)
+
+For a workflow similar to `/home/htr1hc/01_SDV/49_HPC_Farm/projects/carla-streaming`
+that focuses only on the simulator, use the new helper:
+
+```bash
+# Launch CARLA with ad-hoc overrides (no streaming stack)
+scripts/run-local-carla.sh --quality High --resolution 2560x1440 --offscreen
+
+# Other actions
+scripts/run-local-carla.sh --stop        # stop service
+scripts/run-local-carla.sh --status      # show status
+scripts/run-local-carla.sh --logs        # tail logs
+```
+
+The wrapper sources `.env` (if present) and lets you override CARLA quality,
+resolution, offscreen/OpenGL modes, ports, controller type, DISPLAY, and GPU
+visibility via CLI flags—handy when you need to tweak options without editing
+configuration files.
+
 ### Jetson Orin (Client Mode)
 
 **Requirements:** x86 server running CARLA (see above)
@@ -238,9 +258,12 @@ docker compose restart carla
 ├── docker-compose.yml              # x86 deployment
 ├── docker-compose.jetson-client.yml# Jetson deployment
 ├── scripts/
-│   ├── start-carla.sh              # Startup script
+│   └── run-local-carla.sh          # Local helper wrapper
+├── container_scripts/
+│   ├── start-carla.sh              # Container startup script
 │   ├── setup-display.sh            # Display setup
 │   ├── setup-controller.sh         # Controller setup
+│   ├── carla-config.py             # Config helper
 │   └── manual_control_wheel.py     # Wheel control
 ├── examples/
 │   └── jetson_client_example.py    # Jetson example

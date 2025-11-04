@@ -140,8 +140,8 @@ RUN pip3 install --no-cache-dir carla || echo "CARLA Python API will be installe
 # Final stage - select based on target platform
 FROM carla-${TARGETARCH} as final
 
-# Copy helper scripts
-COPY scripts/ /home/carla/scripts/
+# Copy helper scripts (used inside the container)
+COPY container_scripts/ /home/carla/scripts/
 RUN chmod +x /home/carla/scripts/*.sh && \
     chown -R carla:carla /home/carla/scripts
 

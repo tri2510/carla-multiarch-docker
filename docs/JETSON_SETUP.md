@@ -231,10 +231,10 @@ DOCKER_RUNTIME=nvidia
 
 ```bash
 # Setup display
-./scripts/setup-display.sh
+./container_scripts/setup-display.sh
 
 # Setup controller (if you have Logitech wheel)
-./scripts/setup-controller.sh
+./container_scripts/setup-controller.sh
 ```
 
 ### 4. Build Docker Image

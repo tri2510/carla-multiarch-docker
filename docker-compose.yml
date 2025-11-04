@@ -62,7 +62,7 @@ services:
       - ./configs:/home/carla/configs:rw
       - ./data:/home/carla/data:rw
       - ./logs:/home/carla/logs:rw
-      - ./scripts:/home/carla/scripts:ro
+      - ./container_scripts:/home/carla/scripts:ro
 
       # Optional: Mount custom maps or assets
       # - ./custom_maps:/home/carla/Import:rw
@@ -140,7 +140,7 @@ services:
   #   container_name: carla-config-helper
   #   volumes:
   #     - ./configs:/home/carla/configs:rw
-  #     - ./scripts:/home/carla/scripts:ro
+  #     - ./container_scripts:/home/carla/scripts:ro
   #   entrypoint: ["/home/carla/scripts/carla-config.py"]
   #   profiles:
   #     - tools
