@@ -7,12 +7,14 @@ Plug-and-play CARLA simulator for x86_64 and ARM64 (Jetson Orin) with direct dis
 
 ## Features
 
-- **Multi-Architecture**: Runs on x86_64 and ARM64 (Jetson Orin)
+- **Multi-Architecture**: Runs on x86_64 (ARM64/Jetson Orin support in progress)
 - **Direct Display**: Native X11/Wayland support (no remote desktop)
-- **GPU Accelerated**: NVIDIA GPU support on both platforms
+- **GPU Accelerated**: NVIDIA GPU support
 - **Controller Support**: Logitech G27/G29/G920 wheels out-of-the-box
 - **Easy Configuration**: Interactive configuration helper
-- **GitHub Actions**: Automated multi-arch builds
+- **GitHub Actions**: Automated builds
+
+> ⚠️ **Note**: ARM64/Jetson Orin support requires CARLA built from source. See [ARM64_STATUS.md](ARM64_STATUS.md) for details.
 
 ## Quick Start
 
@@ -321,8 +323,8 @@ GitHub Actions automatically builds both architectures and pushes to container r
 
 ## Supported CARLA Version
 
-- CARLA 0.9.15 (x86_64)
-- CARLA 0.9.15 compatible (ARM64)
+- **CARLA 0.9.15** (x86_64) - ✅ Fully supported
+- **CARLA 0.9.15** (ARM64) - ⚠️ Requires manual build (see [ARM64_STATUS.md](ARM64_STATUS.md))
 
 ## License
 
