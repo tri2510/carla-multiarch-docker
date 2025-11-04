@@ -2,8 +2,10 @@
 
 Docker setup for CARLA simulator with display support and Logitech wheel integration.
 
-[![Build](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/docker-build.yml/badge.svg)](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/docker-build.yml)
+[![Validation](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/docker-build.yml/badge.svg)](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/docker-build.yml)
 [![Release](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/release.yml/badge.svg)](https://github.com/tri2510/carla-multiarch-docker/actions/workflows/release.yml)
+
+> **Note:** Pre-built Docker images are not provided due to CARLA's large size (~10GB). Build locally using the instructions below.
 
 ## What This Project Provides
 

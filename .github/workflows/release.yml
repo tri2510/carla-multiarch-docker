@@ -6,83 +6,62 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  build-and-release:
+  create-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker images
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64
-          # TODO: Add linux/arm64 when CARLA ARM build is ready
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
           body: |
-            ## CARLA Multi-Architecture Docker Release
+            ## CARLA Docker Release
 
             ### Supported Platforms
-            - `linux/amd64` - x86_64 Desktop/Server
-            - `linux/arm64` - NVIDIA Jetson Orin
+            - `linux/amd64` - x86_64 Desktop/Server ✅
+            - `linux/arm64` - Jetson Orin Python Client ✅
 
-            ### Docker Images
-            Pull the image:
+            ### Installation
+
+            **x86_64 (Full CARLA Simulator):**
             ```bash
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            git clone https://github.com/tri2510/carla-multiarch-docker.git
+            cd carla-multiarch-docker
+            cp .env.example .env
+            docker compose up -d
             ```
 
-            ### Quick Start
+            **Jetson Orin (Python Client):**
             ```bash
-            docker run --rm -it \
-              --runtime=nvidia \
-              --gpus all \
-              -e DISPLAY=$DISPLAY \
-              -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-              -p 2000:2000 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            git clone https://github.com/tri2510/carla-multiarch-docker.git
+            cd carla-multiarch-docker
+            docker build -f Dockerfile.jetson-client -t carla-jetson-client .
+            docker compose -f docker-compose.jetson-client.yml up -d
+            ```
+
+            ### Documentation
+            - [README.md](README.md) - Main documentation
+            - [docs/QUICKSTART.md](docs/QUICKSTART.md) - Quick start guide
+            - [docs/JETSON_CLIENT.md](docs/JETSON_CLIENT.md) - Jetson setup
+            - [docs/RESEARCH_ARM64.md](docs/RESEARCH_ARM64.md) - ARM64 research
+
+            ### Note on Docker Images
+            Pre-built Docker images are not provided due to CARLA's large size (~10GB).
+            Build locally using the provided Dockerfiles.
+
+            **Build commands:**
+            ```bash
+            # x86_64
+            ./build.sh --platform linux/amd64
+
+            # Jetson client
+            docker build -f Dockerfile.jetson-client -t carla-jetson-client .
             ```
 
             See [README.md](README.md) for full documentation.
