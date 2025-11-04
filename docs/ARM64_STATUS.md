@@ -7,7 +7,7 @@
 ## What Works
 
 ✅ **x86_64 (Intel/AMD)**
-- Official CARLA 0.9.15 binaries
+- Official CARLA 0.10.0 (UE5) binaries
 - Full GPU acceleration
 - All features working
 

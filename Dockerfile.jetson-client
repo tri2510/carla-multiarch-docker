@@ -3,6 +3,7 @@
 # Does NOT include full CARLA simulator
 
 FROM nvcr.io/nvidia/l4t-pytorch:r35.2.1-pth2.0-py3
+ARG CARLA_PY_VERSION=0.9.16
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -22,9 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CARLA Python client
+# Install CARLA Python client (latest ARM64 wheel available on PyPI)
 RUN pip3 install --no-cache-dir \
-    carla==0.9.15 \
+    "carla==${CARLA_PY_VERSION}" \
     numpy \
     pygame \
     pillow \

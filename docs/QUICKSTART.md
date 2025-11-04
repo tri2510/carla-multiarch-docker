@@ -176,7 +176,7 @@ DOCKER_MEMORY=12G
 
 ## What's Included
 
-- ✅ CARLA 0.9.15 simulator
+- ✅ CARLA 0.10.0 simulator
 - ✅ Python API and examples
 - ✅ Logitech wheel support (G27/G29/G920)
 - ✅ Direct display output (X11/Wayland)

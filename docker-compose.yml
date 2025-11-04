@@ -120,7 +120,7 @@ services:
 
     # Health check
     healthcheck:
-      test: ["CMD-SHELL", "pgrep CarlaUE4 || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f CarlaUE || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

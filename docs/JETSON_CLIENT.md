@@ -76,6 +76,11 @@ docker build -f Dockerfile.jetson-client -t carla-jetson-client:latest .
 
 This takes 10-15 minutes (downloads PyTorch for Jetson).
 
+> **Note:** CARLA 0.10.x binaries are only published for x86_64 at the
+> moment. The Jetson client layer therefore installs the latest ARM64 Python
+> wheel available on PyPI (0.9.16) which remains wire-compatible with the
+> 0.10.x server RPC API.
+
 ### Step 4: Start Client Container
 
 ```bash
@@ -92,7 +97,7 @@ Expected output:
 Testing connection to CARLA server at 192.168.1.100:2000...
 ✅ Connected successfully!
    Map: Town03
-   Server version: 0.9.15
+   Server version: 0.10.0
 ```
 
 ### Step 5: Run Example
@@ -279,9 +284,9 @@ docker stats
 # Rebuild image
 docker compose -f docker-compose.jetson-client.yml build --no-cache
 
-# Or manually install
+# Or manually install (latest PyPI build for ARM64)
 docker compose -f docker-compose.jetson-client.yml exec carla-client \
-  pip3 install carla==0.9.15
+  pip3 install carla==0.9.16
 ```
 
 ## Development Workflow

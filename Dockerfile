@@ -92,11 +92,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nvidia-utils-470 \
     && rm -rf /var/lib/apt/lists/* || true
 
-# Download and install CARLA 0.9.15 for x86_64
-ENV CARLA_VERSION=0.9.15
-RUN wget -q https://carla-releases.s3.us-east-005.backblazeb2.com/Linux/CARLA_${CARLA_VERSION}.tar.gz && \
-    tar -xzf CARLA_${CARLA_VERSION}.tar.gz && \
-    rm CARLA_${CARLA_VERSION}.tar.gz && \
+# Download and install CARLA 0.10.0 for x86_64 (UE5)
+ENV CARLA_VERSION=0.10.0
+ENV CARLA_TARBALL=Carla-${CARLA_VERSION}-Linux-Shipping.tar.gz
+ENV CARLA_DOWNLOAD_URL=https://carla-releases.b-cdn.net/Linux/${CARLA_TARBALL}
+RUN wget --progress=dot:giga "${CARLA_DOWNLOAD_URL}" -O "${CARLA_TARBALL}" && \
+    tar -xzf "${CARLA_TARBALL}" && \
+    rm "${CARLA_TARBALL}" && \
     chown -R carla:carla /home/carla
 
 # Install CARLA Python API

@@ -10,7 +10,7 @@ Docker setup for CARLA simulator with display support and Logitech wheel integra
 ## What This Project Provides
 
 ### ✅ For x86_64 (Desktop/Server)
-- **CARLA 0.9.15** full simulator in Docker
+- **CARLA 0.10.0 (UE5)** full simulator in Docker
 - Direct display support (X11/Wayland)
 - GPU acceleration with NVIDIA runtime
 - Logitech wheel support (G27/G29/G920)
@@ -87,6 +87,10 @@ docker compose -f docker-compose.jetson-client.yml up -d
 docker compose -f docker-compose.jetson-client.yml exec carla-client \
   python3 /workspace/test_connection.py
 ```
+
+> **Note:** CARLA 0.10.x binaries are currently published for x86_64 only. The
+> Jetson client container therefore pins the latest ARM64-compatible Python API
+> wheel from PyPI (0.9.16) which is wire-compatible with the 0.10.x server.
 
 See [docs/JETSON_CLIENT.md](docs/JETSON_CLIENT.md) for complete Jetson setup guide.
 
@@ -280,7 +284,7 @@ docker compose restart carla
 
 ## Supported Versions
 
-- **CARLA:** 0.9.15
+- **CARLA:** 0.10.0
 - **Python:** 3.8+
 - **Docker:** 20.10+
 - **NVIDIA Driver:** 470+

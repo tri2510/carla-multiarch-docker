@@ -87,7 +87,20 @@ echo "  OpenGL Mode: $CARLA_OPENGL"
 echo ""
 
 # Build CARLA command
-CARLA_CMD="./CarlaUE4.sh"
+CARLA_HOME="/home/carla"
+CARLA_CMD=""
+
+if [ -f "$CARLA_HOME/CarlaUE5.sh" ]; then
+    CARLA_CMD="$CARLA_HOME/CarlaUE5.sh"
+    echo "Detected Unreal Engine 5 build (CarlaUE5.sh)"
+elif [ -f "$CARLA_HOME/CarlaUE4.sh" ]; then
+    CARLA_CMD="$CARLA_HOME/CarlaUE4.sh"
+    echo "Detected Unreal Engine 4 build (CarlaUE4.sh)"
+else
+    echo "Error: Could not find CarlaUE5.sh or CarlaUE4.sh in $CARLA_HOME" >&2
+    exit 1
+fi
+
 CARLA_ARGS=""
 
 if [ "$CARLA_OFFSCREEN" = "true" ]; then
@@ -108,15 +121,7 @@ CARLA_ARGS="$CARLA_ARGS -carla-rpc-port=$CARLA_PORT"
 CARLA_ARGS="$CARLA_ARGS -carla-streaming-port=$CARLA_STREAMING_PORT"
 CARLA_ARGS="$CARLA_ARGS -prefernvidia"
 
-# Change to CARLA directory
-if [ -d "/home/carla/CarlaUE4" ]; then
-    cd /home/carla/CarlaUE4/Binaries/Linux
-elif [ -d "/home/carla" ]; then
-    cd /home/carla
-else
-    echo "Error: CARLA directory not found"
-    exit 1
-fi
+cd "$CARLA_HOME"
 
 echo "Starting CARLA with command:"
 echo "$CARLA_CMD $CARLA_ARGS"
@@ -124,4 +129,4 @@ echo ""
 echo "========================================="
 
 # Start CARLA
-exec $CARLA_CMD $CARLA_ARGS
+exec "$CARLA_CMD" $CARLA_ARGS

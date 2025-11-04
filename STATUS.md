@@ -8,7 +8,7 @@
 ### ✅ Working
 
 **x86_64 (Desktop/Server):**
-- [x] Dockerfile for CARLA 0.9.15 server
+- [x] Dockerfile for CARLA 0.10.0 (UE5) server
 - [x] Docker Compose configuration
 - [x] Direct display support (X11/Wayland)
 - [x] GPU acceleration (NVIDIA runtime)
@@ -92,7 +92,8 @@ carla-multiarch-docker/
 ├── Dockerfile.jetson-client        # ARM64 client ✅
 ├── docker-compose.yml              # Server deployment ✅
 ├── docker-compose.jetson-client.yml# Client deployment ✅
-├── scripts/                        # Helper scripts ✅
+├── scripts/run-local-carla.sh      # Local helper ✅
+├── container_scripts/              # In-container helpers ✅
 ├── examples/                       # Example code ✅
 ├── docs/                           # Documentation ✅
 │   ├── QUICKSTART.md

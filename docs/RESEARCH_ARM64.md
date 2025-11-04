@@ -1,7 +1,9 @@
 # Research: CARLA on ARM64/Jetson Orin
 
 **Research Date:** 2025-11-04
-**CARLA Version:** 0.9.15
+**CARLA Version:** 0.10.0 (x86 server). Jetson/ARM research references still
+cite historical 0.9.15 community builds because newer ARM64 artifacts are not
+available yet.
 **Target Platform:** ARM64 (Jetson Orin)
 
 ## Summary
@@ -69,7 +71,7 @@
 ### 4. Docker Images Available
 
 **For x86_64 (CARLA Server):**
-- `carlasim/carla:0.9.15` - Official image
+- `carlasim/carla:0.10.0` - Official image
 - Works perfectly for simulation server
 
 **For ARM64 (Python Client Only):**
@@ -120,7 +122,7 @@
 # docker-compose.yml on x86 Server
 services:
   carla-server:
-    image: carlasim/carla:0.9.15
+    image: carlasim/carla:0.10.0
     runtime: nvidia
     ports:
       - "2000:2000"  # CARLA RPC
