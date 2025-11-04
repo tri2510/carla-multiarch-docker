@@ -1,0 +1,56 @@
+# Environment files
+.env
+
+# Claude.md files
+claude.md
+CLAUDE.md
+.claude/
+
+# Configuration files (may contain sensitive data)
+configs/*.yaml
+configs/*.conf
+!configs/.gitkeep
+
+# Data directories
+data/*
+!data/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Docker volumes
+*.tar
+*.tar.gz
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.log
+*.tmp
+.cache/
+
+# Docker
+docker-compose.override.yml

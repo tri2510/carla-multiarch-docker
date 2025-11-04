@@ -1,0 +1,161 @@
+version: '3.8'
+
+services:
+  carla:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+    image: carla-multiarch:latest
+    container_name: carla-simulator
+    hostname: carla-host
+
+    # Display support - X11 direct display
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - XAUTHORITY=${XAUTHORITY:-/root/.Xauthority}
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/1000}
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}
+      - SDL_VIDEODRIVER=${SDL_VIDEODRIVER:-x11}
+
+      # NVIDIA GPU support
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-all}
+
+      # CARLA settings
+      - CARLA_QUALITY=${CARLA_QUALITY:-Epic}
+      - CARLA_RES_X=${CARLA_RES_X:-1920}
+      - CARLA_RES_Y=${CARLA_RES_Y:-1080}
+      - CARLA_PORT=${CARLA_PORT:-2000}
+      - CARLA_STREAMING_PORT=${CARLA_STREAMING_PORT:-2001}
+      - CARLA_OFFSCREEN=${CARLA_OFFSCREEN:-false}
+      - CARLA_OPENGL=${CARLA_OPENGL:-false}
+
+      # Controller settings
+      - CONTROLLER_TYPE=${CONTROLLER_TYPE:-g29}
+      - FORCE_FEEDBACK=${FORCE_FEEDBACK:-true}
+
+    # Network settings
+    ports:
+      - "${CARLA_PORT:-2000}:2000"  # CARLA RPC
+      - "${CARLA_STREAMING_PORT:-2001}:2001"  # CARLA Streaming
+      - "2012:2002"  # CARLA Additional
+
+    # Volume mounts
+    volumes:
+      # Display sockets
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-~/.Xauthority}:/root/.Xauthority:ro
+      - ${XDG_RUNTIME_DIR:-/run/user/1000}:${XDG_RUNTIME_DIR:-/run/user/1000}:rw
+
+      # Input devices (controllers, wheels)
+      - /dev/input:/dev/input:rw
+      - /run/udev:/run/udev:ro
+
+      # Audio
+      - /run/pulse:/run/pulse:rw
+      - /var/run/dbus:/var/run/dbus:ro
+
+      # Configuration and data
+      - ./configs:/home/carla/configs:rw
+      - ./data:/home/carla/data:rw
+      - ./logs:/home/carla/logs:rw
+      - ./scripts:/home/carla/scripts:ro
+
+      # Optional: Mount custom maps or assets
+      # - ./custom_maps:/home/carla/Import:rw
+
+    # Device access
+    devices:
+      # GPU access
+      - /dev/dri:/dev/dri
+
+      # All input devices (for wheel/controller)
+      # These will be automatically detected
+      # - /dev/input/js0
+      # - /dev/input/event0
+
+    # Privileged mode for full hardware access
+    # Can be disabled if not needed, but required for some controllers
+    privileged: ${DOCKER_PRIVILEGED:-false}
+
+    # Alternative to privileged: specific capabilities
+    cap_add:
+      - SYS_ADMIN
+      - SYS_NICE
+      - SYS_PTRACE
+
+    # Security options
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+
+    # IPC mode for shared memory
+    ipc: host
+
+    # Network mode
+    network_mode: bridge
+
+    # Runtime for GPU support
+    # For x86: nvidia
+    # For Jetson: nvidia (also works with nvidia-container-runtime)
+    runtime: ${DOCKER_RUNTIME:-nvidia}
+
+    # Resource limits (adjust based on your hardware)
+    deploy:
+      resources:
+        limits:
+          cpus: '${DOCKER_CPUS:-8}'
+          memory: ${DOCKER_MEMORY:-16G}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility, graphics]
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep CarlaUE4 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # Optional: Configuration helper service
+  # Uncomment to use
+  # carla-config:
+  #   image: carla-multiarch:latest
+  #   container_name: carla-config-helper
+  #   volumes:
+  #     - ./configs:/home/carla/configs:rw
+  #     - ./scripts:/home/carla/scripts:ro
+  #   entrypoint: ["/home/carla/scripts/carla-config.py"]
+  #   profiles:
+  #     - tools
+
+# Networks
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# Volumes (optional - for persistent data)
+volumes:
+  carla-data:
+    driver: local
+  carla-logs:
+    driver: local
