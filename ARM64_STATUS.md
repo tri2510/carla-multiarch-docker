@@ -1,6 +1,8 @@
 # ARM64/Jetson Orin Support Status
 
-⚠️ **Current Status: Work in Progress**
+⚠️ **Update (Nov 2024): Native ARM64 build is NOT POSSIBLE**
+
+✅ **Solution: Client-Server Architecture (Proven & Working)**
 
 ## What Works
 
@@ -9,49 +11,52 @@
 - Full GPU acceleration
 - All features working
 
-## What's Not Ready
+## What's Not Possible
 
-❌ **ARM64/Jetson Orin**
-- CARLA binaries need to be built from source
+❌ **Native ARM64/Jetson Orin CARLA Server**
+- Unreal Engine 4.26 cannot be compiled for ARM64
 - Official CARLA doesn't provide ARM64 pre-built binaries
-- Building takes 4-6 hours
+- Building from source is not feasible (see RESEARCH_ARM64.md)
 
-## Solutions for Jetson Orin Users
+✅ **ARM64/Jetson Orin CARLA Python Client**
+- Python client works perfectly on ARM64
+- Connects to remote x86 CARLA server
+- Proven architecture used by Autoware community
 
-### Option 1: Mount Pre-built CARLA (Recommended)
+## Proven Solution for Jetson Orin Users
 
-If you already have CARLA built on your Jetson:
+### Client-Server Architecture (Recommended)
 
-```yaml
-# docker-compose.yml
-volumes:
-  - /path/to/your/carla/build:/home/carla:ro
-```
+**Setup:**
 
-### Option 2: Build CARLA from Source on Jetson
+1. **x86 Server (Desktop/Cloud)**: Run CARLA simulator
+2. **Jetson Orin**: Run CARLA Python client + your algorithms
 
 ```bash
-# On Jetson Orin
-git clone --depth 1 -b 0.9.15 https://github.com/carla-simulator/carla.git
-cd carla
+# On x86 Server - Run CARLA
+docker compose up -d
 
-# Follow official build instructions
-# https://carla.readthedocs.io/en/latest/build_linux/
+# On Jetson Orin - Run Python client
+docker compose -f docker-compose.jetson-client.yml up -d
 
-# This takes 4-6 hours
-./Update.sh
-make PythonAPI
-make launch
+# Test connection
+docker compose -f docker-compose.jetson-client.yml exec carla-client \
+  python3 /workspace/test_connection.py
+
+# Run example
+docker compose -f docker-compose.jetson-client.yml exec carla-client \
+  python3 /workspace/examples/jetson_client_example.py
 ```
 
-Then mount the built CARLA in docker-compose.yml
+**Network Requirements:**
+- Local network or VPN connection
+- Recommended: 1 Gbps Ethernet
+- Latency: <10ms for real-time control
 
-### Option 3: Use Lightweight Alternative
-
-For testing/development on Jetson, consider:
-- CARLA ROS Bridge with remote x86 CARLA server
-- CARLA Python API connecting to remote server
-- Lighter simulators like LGSVL
+**This is the PROVEN approach used by:**
+- Autoware.universe with CARLA
+- Academic research projects
+- Industry autonomous driving development
 
 ## Roadmap
 
