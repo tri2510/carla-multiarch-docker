@@ -20,6 +20,10 @@ scripts/run-host-carla.sh --preset safe
 
 # Reuse a pre-downloaded archive
 # scripts/setup-local-carla.sh --tarball /path/CARLA_0.9.15.tar.gz
+
+# Live controls (map, vehicles, weather)
+scripts/host-carla-helper.py --list-maps
+scripts/host-carla-helper.py --set-map Town05 --spawn vehicle.lincoln.mkz2017
 ```
 
 The launcher reuses `.env`, so when you switch back to Docker the same

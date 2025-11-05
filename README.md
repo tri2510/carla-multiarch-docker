@@ -86,6 +86,11 @@ scripts/setup-local-carla.sh
 # 2. Launch with the same CARLA_* env toggles you use for Docker
 scripts/run-host-carla.sh --preset safe
 
+# 3. Manage the running session (map, car, weather, manual control)
+scripts/host-carla-helper.py --list-maps
+scripts/host-carla-helper.py --set-map Town04 --spawn vehicle.tesla.model3 --view chase
+scripts/host-carla-helper.py --manual --manual-args --res 1280x720
+
 # Optional: pass extra Unreal arguments after --
 scripts/run-host-carla.sh -- --fps=20
 
@@ -100,6 +105,17 @@ The host launcher sources `.env`, so quality, ports, and controller settings
 stay in sync with the container workflow. When you're ready to migrate back to
 Docker, stop the host process (`Ctrl+C`) and run `scripts/run-local-carla.sh --build`
 to rebuild the image using the tested configuration.
+
+Use `scripts/host-carla-helper.py --help` to explore the available tweaks:
+
+- `--set-map Town05` reloads a different map without restarting the simulator
+- `--spawn vehicle.audi.tt --view front` respawns your hero vehicle and aligns
+  the spectator camera
+- `--weather HardRainSunset` switches the current weather preset
+- `--manual` reuses CARLA's `manual_control.py` example for keyboard/controller
+
+All helper actions work against the simulator launched via `scripts/run-host-carla.sh`
+as long as the RPC port (default 2000) is reachable.
 
 ### Jetson Orin (Client Mode)
 
@@ -329,6 +345,7 @@ docker compose restart carla
 ├── scripts/
 │   ├── run-local-carla.sh          # Docker helper wrapper
 │   ├── run-host-carla.sh           # Launch unpacked CARLA on host
+│   ├── host-carla-helper.py        # Runtime map/vehicle/weather helper
 │   └── setup-local-carla.sh        # Download/unpack CARLA binary
 ├── container_scripts/
 │   ├── start-carla.sh              # Container startup script
