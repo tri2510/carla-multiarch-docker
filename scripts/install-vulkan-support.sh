@@ -15,12 +15,46 @@ fi
 
 log() { printf '[install-vulkan-support] %s\n' "$*"; }
 
+ensure_volian_key() {
+  local list_file="/etc/apt/sources.list.d/volian-archive-scar-unstable.list"
+  local keyring="/usr/share/keyrings/volian-archive-scar.gpg"
+  if [[ -f "$list_file" && ! -f "$keyring" ]]; then
+    log "Missing Volian repo key; importing..."
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL https://deb.volian.org/volian/scar.key | gpg --dearmor > "$keyring"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -qO- https://deb.volian.org/volian/scar.key | gpg --dearmor > "$keyring"
+    else
+      log "WARNING: curl/wget unavailable; cannot import Volian repo key"
+    fi
+  fi
+}
+
+replace_broken_mirrors() {
+  local bad_mirror="https://cesium.di.uminho.pt/pub/ubuntu-archive"
+  local fallback="http://archive.ubuntu.com/ubuntu"
+  if grep -R "$bad_mirror" /etc/apt/sources.list /etc/apt/sources.list.d  >/dev/null 2>&1; then
+    log "Detected unsupported mirror ($bad_mirror); switching to $fallback"
+    grep -Rl "$bad_mirror" /etc/apt/sources.list /etc/apt/sources.list.d \
+      | while read -r file; do
+          sed -i "s|$bad_mirror|$fallback|g" "$file"
+        done
+  fi
+}
+
+prepare_apt_sources() {
+  ensure_volian_key
+  replace_broken_mirrors
+}
+
 APT_PACKAGES=(
   ubuntu-drivers-common
   vulkan-utils
   mesa-vulkan-drivers
   mesa-vulkan-drivers:i386
 )
+
+prepare_apt_sources
 
 log "Updating apt index..."
 apt-get update -y >/dev/null
