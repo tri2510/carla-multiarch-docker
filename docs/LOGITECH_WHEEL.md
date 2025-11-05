@@ -23,8 +23,8 @@ button IDs for reverse/handbrake toggles.
 | Control            | Axis/Button ID |
 |--------------------|----------------|
 | Steering wheel     | Axis 0         |
-| Throttle pedal     | Axis 2         |
-| Brake pedal        | Axis 3         |
+| Throttle pedal     | Axis 3         |
+| Brake pedal        | Axis 2         |
 | Reverse toggle     | Button 4 (right paddle) |
 | Handbrake          | Button 2 (circle)       |
 
