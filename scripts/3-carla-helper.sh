@@ -227,17 +227,9 @@ launch_wheel_manual() {
   echo "  • Circle: handbrake"
   echo "  • Right paddle: toggle reverse"
   echo "  • Buttons 0-3: restart/hud/camera/weather"
-  echo "  • Keyboard shortcuts still work (Q gear, TAB camera, etc.)"
+  echo "  • Keyboard shortcuts still work (full list below)"
   echo ""
-  echo "Keyboard/extra shortcuts:"
-  echo "  W/S       - Throttle/Brake (fallback)"
-  echo "  A/D       - Steer left/right"
-  echo "  Space     - Handbrake"
-  echo "  TAB       - Change camera"
-  echo "  \` / N     - Next sensor"
-  echo "  Q         - Toggle reverse gear"
-  echo "  P         - Toggle autopilot"
-  echo "  ESC       - Exit manual control"
+  print_keyboard_shortcuts
   echo ""
   echo "Press any key to launch manual_control_steeringwheel.py..."
   read -n 1 -s
@@ -266,6 +258,8 @@ launch_keyboard_manual() {
   echo "  A/D         - Steer left/right"
   echo "  Space       - Handbrake"
   echo "  Q or ESC    - Exit manual control"
+  echo ""
+  print_keyboard_shortcuts
   echo ""
   echo "Press any key to start..."
   read -n 1 -s
@@ -481,3 +475,21 @@ else
   # No arguments, run interactive mode
   interactive_mode
 fi
+# Common keyboard shortcuts shown before launching manual control
+print_keyboard_shortcuts() {
+  echo "Keyboard shortcuts:" 
+  echo "  W / S      - Throttle / Brake"
+  echo "  A / D      - Steer left / right"
+  echo "  Space      - Handbrake"
+  echo "  Q          - Toggle reverse gear"
+  echo "  M          - Toggle manual transmission"
+  echo "  , / .      - Gear down / up (manual)"
+  echo "  TAB        - Change camera position"
+  echo "  \` or N    - Next sensor"
+  echo "  [1-9]      - Select sensor"
+  echo "  P          - Toggle autopilot"
+  echo "  F1         - Toggle HUD"
+  echo "  H / ?      - Toggle help"
+  echo "  R          - Toggle camera recording"
+  echo "  ESC        - Exit manual control"
+}
