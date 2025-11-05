@@ -61,6 +61,7 @@ def patch_dual_control(module):
                 break
 
             self._select_shifter_device()
+            self._force_manual_mode()
 
         def _select_shifter_device(self):
             if self._shifter_index is None and self._shifter_name is None:
@@ -88,6 +89,12 @@ def patch_dual_control(module):
                 if js.get_id() != self._joystick.get_id():
                     js.init()
                 self._shifter_device = js
+
+        def _force_manual_mode(self):
+            if isinstance(self._control, carla.VehicleControl):
+                self._control.manual_gear_shift = True
+                if self._control.gear == 0:
+                    self._control.gear = 1
 
         def _apply_shifter(self, button_states):
             if not self._shifter_mapping:
