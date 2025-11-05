@@ -255,7 +255,7 @@ def run_manual_control(extra_args: Optional[List[str]], wheel: bool = False, whe
         if wheel_config:
             context = _maybe_override_wheel_config(Path(wheel_config))
         else:
-            ensure_default_wheel_config()
+            context = _maybe_override_wheel_config(ensure_default_wheel_config())
     with context:
         subprocess.run(cmd, env=env, cwd=cwd, check=False)
 
