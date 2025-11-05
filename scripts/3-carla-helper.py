@@ -250,9 +250,9 @@ def run_manual_control(extra_args: Optional[List[str]], wheel: bool = False, whe
         forwarded = list(extra_args)
         if forwarded and forwarded[0] == "--":
             forwarded = forwarded[1:]
-    default_filter = os.environ.get("CARLA_MANUAL_FILTER", "vehicle.tesla.model3")
-    if default_filter and "--filter" not in forwarded:
-        forwarded = ["--filter", default_filter, *forwarded]
+    manual_filter = os.environ.get("CARLA_MANUAL_FILTER", "")
+    if manual_filter and "--filter" not in forwarded:
+        forwarded = ["--filter", manual_filter, *forwarded]
 
     cmd = [sys.executable, str(script_path), *forwarded]
     cwd = str(EXAMPLES_DIR)
