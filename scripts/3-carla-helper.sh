@@ -17,6 +17,7 @@ print_keyboard_shortcuts() {
   echo "  Q          - Toggle reverse gear"
   echo "  M          - Toggle manual transmission"
   echo "  , / .      - Gear down / up (manual)"
+  echo "  T          - Respawn Tesla (Cybertruck)"
   echo "  TAB        - Change camera position"
   echo "  \` or N    - Next sensor"
   echo "  [1-9]      - Select sensor"
@@ -247,6 +248,7 @@ launch_wheel_manual() {
   echo "  • Circle: handbrake"
   echo "  • Right paddle: toggle reverse"
   echo "  • Buttons 0-3: restart/hud/camera/weather"
+  echo "  • Press 'T' anytime to respawn the Tesla Cybertruck"
   echo "  • Keyboard shortcuts still work (full list below)"
   echo ""
   print_keyboard_shortcuts
@@ -278,6 +280,7 @@ launch_keyboard_manual() {
   echo "  A/D         - Steer left/right"
   echo "  Space       - Handbrake"
   echo "  Q or ESC    - Exit manual control"
+  echo "  T           - Respawn Tesla (Cybertruck)"
   echo ""
   print_keyboard_shortcuts
   echo ""
