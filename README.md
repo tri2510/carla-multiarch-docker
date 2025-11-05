@@ -56,6 +56,9 @@ scripts/3-carla-helper.sh --set-map Town04
 scripts/3-carla-helper.sh --spawn vehicle.tesla.model3 --view chase
 scripts/3-carla-helper.sh --weather HardRainSunset
 scripts/3-carla-helper.sh --manual  # Drive with keyboard/wheel
+
+Need wheel support? Menu option 7 and `scripts/3-carla-helper.sh --manual-wheel`
+use the Logitech profile described in [docs/LOGITECH_WHEEL.md](docs/LOGITECH_WHEEL.md).
 ```
 
 ### Customizing Startup

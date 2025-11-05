@@ -8,6 +8,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 HELPER_PY="$SCRIPT_DIR/3-carla-helper.py"
 
+# Detect wheel availability via pygame (returns 0 if at least one joystick)
+wheel_detected() {
+  python3 - <<'PY' >/dev/null 2>&1
+import pygame
+pygame.init()
+pygame.joystick.init()
+import sys
+sys.exit(0 if pygame.joystick.get_count() > 0 else 1)
+PY
+}
+
 # Check if CARLA is running
 check_carla() {
   if ! ss -tlnp 2>/dev/null | grep -q ":2000 " && ! netstat -tlnp 2>/dev/null | grep -q ":2000 "; then
@@ -38,10 +49,11 @@ show_menu() {
   echo "  6) Move camera view"
   echo ""
   echo "Control:"
-  echo "  7) Manual driving (keyboard/wheel)"
+  echo "  7) Manual driving (Logitech wheel)"
   echo ""
   echo "Settings:"
   echo "  8) Change quality (restart CARLA)"
+  echo "  9) Manual driving (keyboard)"
   echo ""
   echo "  0) Exit"
   echo ""
@@ -174,41 +186,72 @@ spawn_vehicle() {
   "$HELPER_PY" --spawn "$vehicle_id" --view "$view"
 }
 
-# Manual control submenu
-manual_control_menu() {
+# Manual control helpers
+launch_wheel_manual() {
+  local wheel_config="${CARLA_WHEEL_CONFIG:-}"
   echo ""
-  echo "Manual control input:"
-  echo "  1) Keyboard/Mouse (default)"
-  echo "  2) Logitech G29/G923 wheel"
+  echo "=========================================="
+  echo "  Manual Control (Logitech Wheel)"
+  echo "=========================================="
   echo ""
-  echo -n "Select input (1-2, default 1): "
-  read -r input_choice
+  echo "Wheel setup:"
+  echo "  • Default profile: scripts/wheel-config-g29.ini"
+  echo "  • Override via env: export CARLA_WHEEL_CONFIG=/path/to/wheel_config.ini"
+  echo "  • Mapping guide: docs/LOGITECH_WHEEL.md"
+  echo "  • Tap the brake pedal once to wake up the wheel"
+  echo ""
+  if ! wheel_detected; then
+    echo "⚠️  No joystick detected. Connect the Logitech wheel, then press Enter to retry." 
+    echo "    (Press 'k' to fall back to keyboard mode.)"
+    read -r user_choice
+    if [[ "$user_choice" =~ ^[Kk]$ ]]; then
+      launch_keyboard_manual
+      return
+    fi
+    if ! wheel_detected; then
+      echo "Still no joystick detected. Falling back to keyboard mode."
+      launch_keyboard_manual
+      return
+    fi
+  fi
+  echo "Controls (wheel buttons):"
+  echo "  • Circle: handbrake"
+  echo "  • Right paddle: toggle reverse"
+  echo "  • Buttons 0-3: restart/hud/camera/weather"
+  echo "  • Keyboard shortcuts still work (Q gear, TAB camera, etc.)"
+  echo ""
+  echo "Press any key to launch manual_control_steeringwheel.py..."
+  read -n 1 -s
+  echo ""
 
-  case $input_choice in
-    2)
-      echo ""
-      echo "Wheel config:"
-      echo "  • Leave blank to use scripts/wheel-config-g29.ini"
-      echo "  • Provide a full path to reuse another config file"
-      echo -n "wheel_config.ini path (optional): "
-      read -r wheel_config
-      if [[ -n "$wheel_config" ]]; then
-        if [[ ! -f "$wheel_config" ]]; then
-          echo "File not found: $wheel_config"
-          return
-        fi
-        "$HELPER_PY" --manual-wheel --wheel-config "$wheel_config"
-      else
-        "$HELPER_PY" --manual-wheel
-      fi
-      ;;
-    ""|1)
-      "$HELPER_PY" --manual
-      ;;
-    *)
-      echo "Invalid option"
-      ;;
-  esac
+  if [[ -n "$wheel_config" ]]; then
+    if [[ -f "$wheel_config" ]]; then
+      "$HELPER_PY" --manual-wheel --wheel-config "$wheel_config"
+    else
+      echo "WARNING: CARLA_WHEEL_CONFIG=$wheel_config not found. Using default profile."
+      "$HELPER_PY" --manual-wheel
+    fi
+  else
+    "$HELPER_PY" --manual-wheel
+  fi
+}
+
+launch_keyboard_manual() {
+  echo ""
+  echo "=========================================="
+  echo "  Manual Control (Keyboard)"
+  echo "=========================================="
+  echo ""
+  echo "Controls:"
+  echo "  W/S         - Throttle/Brake"
+  echo "  A/D         - Steer left/right"
+  echo "  Space       - Handbrake"
+  echo "  Q or ESC    - Exit manual control"
+  echo ""
+  echo "Press any key to start..."
+  read -n 1 -s
+  echo ""
+  "$HELPER_PY" --manual
 }
 
 # Camera view submenu
@@ -377,25 +420,19 @@ interactive_mode() {
         sleep 1
         ;;
       7)
-        echo ""
-        echo "=========================================="
-        echo "  Manual Control"
-        echo "=========================================="
-        echo ""
-        echo "Use keyboard or Logitech wheel/pedals for control."
-        echo "Press any key to choose input..."
-        read -n 1 -s
-        echo ""
-
-        manual_control_menu
-
-        # Auto-return to menu after manual control exits
+        launch_wheel_manual
         echo ""
         echo "Manual control ended. Returning to menu in 2 seconds..."
         sleep 2
         ;;
       8)
         change_quality
+        ;;
+      9)
+        launch_keyboard_manual
+        echo ""
+        echo "Manual control ended. Returning to menu in 2 seconds..."
+        sleep 2
         ;;
       0)
         echo ""
