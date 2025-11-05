@@ -26,33 +26,68 @@ def load_base_module():
 
 def patch_dual_control(module):
     carla = module.carla
+    pygame = module.pygame
 
     class DualControlWithShifter(module.DualControl):  # type: ignore[misc]
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self._shifter_mapping = {}
             self._shifter_reverse = None
+            self._shifter_device = self._joystick
+            self._shifter_name = None
+            self._shifter_index = None
             self._configure_shifter()
 
         def _configure_shifter(self):
             for section in ("G29 Shifter", "Logitech Shifter", "Shifter"):
-                if self._parser.has_section(section):
-                    self._shifter_mapping = {
-                        self._parser.getint(section, "gear1", fallback=-1): 1,
-                        self._parser.getint(section, "gear2", fallback=-1): 2,
-                        self._parser.getint(section, "gear3", fallback=-1): 3,
-                        self._parser.getint(section, "gear4", fallback=-1): 4,
-                        self._parser.getint(section, "gear5", fallback=-1): 5,
-                        self._parser.getint(section, "gear6", fallback=-1): 6,
-                    }
-                    # Remove invalid entries
-                    self._shifter_mapping = {
-                        btn: gear for btn, gear in self._shifter_mapping.items() if btn >= 0
-                    }
-                    self._shifter_reverse = self._parser.getint(section, "reverse", fallback=-1)
-                    if self._shifter_reverse < 0:
-                        self._shifter_reverse = None
+                if not self._parser.has_section(section):
+                    continue
+
+                self._shifter_index = self._parser.getint(section, "device_index", fallback=-1)
+                self._shifter_name = self._parser.get(section, "device_name", fallback="Driving Force Shifter")
+                self._shifter_mapping = {
+                    self._parser.getint(section, "gear1", fallback=-1): 1,
+                    self._parser.getint(section, "gear2", fallback=-1): 2,
+                    self._parser.getint(section, "gear3", fallback=-1): 3,
+                    self._parser.getint(section, "gear4", fallback=-1): 4,
+                    self._parser.getint(section, "gear5", fallback=-1): 5,
+                    self._parser.getint(section, "gear6", fallback=-1): 6,
+                }
+                self._shifter_mapping = {
+                    btn: gear for btn, gear in self._shifter_mapping.items() if btn >= 0
+                }
+                reverse_btn = self._parser.getint(section, "reverse", fallback=-1)
+                self._shifter_reverse = reverse_btn if reverse_btn >= 0 else None
+                break
+
+            self._select_shifter_device()
+
+        def _select_shifter_device(self):
+            if self._shifter_index is None and self._shifter_name is None:
+                return
+
+            preferred_idx = self._shifter_index if self._shifter_index is not None else -1
+            preferred_name = (self._shifter_name or "").lower()
+
+            for idx in range(pygame.joystick.get_count()):
+                js = pygame.joystick.Joystick(idx)
+                name = js.get_name().lower()
+                if preferred_idx >= 0 and idx == preferred_idx:
+                    self._shifter_device = js
+                    if js.get_id() != self._joystick.get_id():
+                        js.init()
                     return
+                if preferred_name and preferred_name in name:
+                    self._shifter_device = js
+                    if js.get_id() != self._joystick.get_id():
+                        js.init()
+                    return
+            # fallback: if a second joystick exists, use it
+            if pygame.joystick.get_count() > 1 and self._shifter_device == self._joystick:
+                js = pygame.joystick.Joystick(1)
+                if js.get_id() != self._joystick.get_id():
+                    js.init()
+                self._shifter_device = js
 
         def _apply_shifter(self, button_states):
             if not self._shifter_mapping:
@@ -73,7 +108,8 @@ def patch_dual_control(module):
 
         def _parse_vehicle_wheel(self):
             super()._parse_vehicle_wheel()
-            button_states = [bool(self._joystick.get_button(i)) for i in range(self._joystick.get_numbuttons())]
+            js = self._shifter_device or self._joystick
+            button_states = [bool(js.get_button(i)) for i in range(js.get_numbuttons())]
             self._apply_shifter(button_states)
 
     module.DualControl = DualControlWithShifter

@@ -53,8 +53,10 @@ Menu option **7** will now inject your custom mapping. Leave the variable unset
 if you just want the default profile.
 
 `[G29 Racing Wheel]` covers wheel/pedals/paddles, while `[G29 Shifter]` maps
-H-pattern buttons. If your shifter reports different button IDs, adjust them in
-the template before launching the helper.
+H-pattern buttons. If your shifter shows up as a separate joystick (common on
+Linux), set `device_index` to that `/dev/input/jsX` index (usually `1`) and use
+the button numbers reported by `jstest` for each gear/reverse. If it is merged
+with the main wheel, keep `device_index = -1` so the helper reuses joystick 0.
 
 ## 4. Button mapping inside CARLA
 `manual_control_steeringwheel.py` still honors many keyboard shortcuts. Useful

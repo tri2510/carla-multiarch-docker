@@ -59,7 +59,9 @@ scripts/3-carla-helper.sh --manual  # Drive with keyboard/wheel
 
 Need wheel support? Menu option 7 (or `scripts/3-carla-helper.sh --manual-wheel`)
 uses the Logitech profile described in [docs/LOGITECH_WHEEL.md](docs/LOGITECH_WHEEL.md),
-including optional mappings for the H-pattern shifter.
+including optional mappings for the H-pattern shifter. Set
+`CARLA_MANUAL_FILTER=vehicle.your_car` if you want something other than the
+default Tesla Model 3 when launching manual control.
 ```
 
 ### Customizing Startup

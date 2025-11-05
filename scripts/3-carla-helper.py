@@ -245,11 +245,16 @@ def run_manual_control(extra_args: Optional[List[str]], wheel: bool = False, whe
     env = os.environ.copy()
     py_paths = [env.get("PYTHONPATH", ""), str(PY_API_SOURCE), str(PY_API_DIST)]
     env["PYTHONPATH"] = os.pathsep.join(filter(None, py_paths))
-    cmd = [sys.executable, str(script_path)]
+    forwarded: List[str] = []
     if extra_args:
-        if extra_args and extra_args[0] == "--":
-            extra_args = extra_args[1:]
-        cmd.extend(extra_args)
+        forwarded = list(extra_args)
+        if forwarded and forwarded[0] == "--":
+            forwarded = forwarded[1:]
+    default_filter = os.environ.get("CARLA_MANUAL_FILTER", "vehicle.tesla.model3")
+    if default_filter and "--filter" not in forwarded:
+        forwarded = ["--filter", default_filter, *forwarded]
+
+    cmd = [sys.executable, str(script_path), *forwarded]
     cwd = str(EXAMPLES_DIR)
     msg = "manual_control_steeringwheel.py" if wheel else "manual_control.py"
     print(f"[helper] Starting {msg}", " ".join(cmd))
