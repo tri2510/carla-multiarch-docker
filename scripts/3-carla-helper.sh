@@ -40,6 +40,9 @@ show_menu() {
   echo "Control:"
   echo "  7) Manual driving (keyboard/wheel)"
   echo ""
+  echo "Settings:"
+  echo "  8) Change quality (restart CARLA)"
+  echo ""
   echo "  0) Exit"
   echo ""
   echo "=========================================="
@@ -50,12 +53,38 @@ show_menu() {
 select_map() {
   echo ""
   echo "Available maps:"
-  "$HELPER_PY" --list-maps | nl -w2 -s') '
+
+  # Get maps and store in array (use --raw for clean output)
+  mapfile -t maps < <("$HELPER_PY" --list-maps --raw)
+
+  # Display with numbers
+  local i=1
+  for map in "${maps[@]}"; do
+    echo "  $i) $(echo "$map" | sed 's|/Game/Carla/Maps/||')"
+    ((i++))
+  done
+
   echo ""
-  echo -n "Enter map name (e.g., Town04) or 'b' to go back: "
+  echo -n "Select map number (1-${#maps[@]}) or 'b' to go back: "
   read -r map_choice
-  if [[ "$map_choice" != "b" ]]; then
-    "$HELPER_PY" --set-map "$map_choice"
+
+  if [[ "$map_choice" == "b" ]]; then
+    return
+  fi
+
+  # Validate number
+  if [[ "$map_choice" =~ ^[0-9]+$ ]] && [ "$map_choice" -ge 1 ] && [ "$map_choice" -le "${#maps[@]}" ]; then
+    local selected_map="${maps[$((map_choice - 1))]}"
+    echo ""
+    echo "Loading $(echo "$selected_map" | sed 's|/Game/Carla/Maps/||')..."
+    "$HELPER_PY" --set-map "$selected_map"
+    if [ $? -eq 0 ]; then
+      echo "✓ Map changed successfully!"
+    else
+      echo "✗ Failed to change map"
+    fi
+  else
+    echo "Invalid selection"
   fi
 }
 
@@ -167,6 +196,104 @@ move_camera() {
   esac
 }
 
+# Quality change submenu
+change_quality() {
+  echo ""
+  echo "=========================================="
+  echo "  Change Quality Settings"
+  echo "=========================================="
+  echo ""
+  echo "Quality levels:"
+  echo "  1) Low      - Best performance"
+  echo "  2) Medium   - Balanced"
+  echo "  3) High     - Better visuals"
+  echo "  4) Epic     - Best visuals (slow)"
+  echo ""
+  echo -n "Select quality (1-4) or 'b' to go back: "
+  read -r quality_choice
+
+  case $quality_choice in
+    1) quality="Low" ;;
+    2) quality="Medium" ;;
+    3) quality="High" ;;
+    4) quality="Epic" ;;
+    b) return ;;
+    *)
+      echo "Invalid choice"
+      return
+      ;;
+  esac
+
+  echo ""
+  echo "Resolution presets:"
+  echo "  1) 800x600    - Fastest"
+  echo "  2) 1280x720   - HD"
+  echo "  3) 1920x1080  - Full HD"
+  echo "  4) 2560x1440  - 2K"
+  echo "  5) Custom"
+  echo ""
+  echo -n "Select resolution (1-5, default: keep current): "
+  read -r res_choice
+
+  resolution=""
+  case $res_choice in
+    1) resolution="800x600" ;;
+    2) resolution="1280x720" ;;
+    3) resolution="1920x1080" ;;
+    4) resolution="2560x1440" ;;
+    5)
+      echo -n "Enter custom resolution (e.g., 1600x900): "
+      read -r resolution
+      ;;
+    "") ;;
+    *)
+      echo "Invalid choice"
+      return
+      ;;
+  esac
+
+  echo ""
+  echo "Stopping CARLA and restarting with new settings..."
+  echo "Quality: $quality"
+  [[ -n "$resolution" ]] && echo "Resolution: $resolution"
+  echo ""
+  echo -n "Proceed? (y/N): "
+  read -r confirm
+
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Cancelled"
+    return
+  fi
+
+  # Kill existing CARLA
+  pkill -f CarlaUE4 || true
+  sleep 2
+
+  # Build restart command
+  restart_cmd="$SCRIPT_DIR/2-start-carla.sh --quality $quality"
+  [[ -n "$resolution" ]] && restart_cmd="$restart_cmd --resolution $resolution"
+
+  echo ""
+  echo "Restarting CARLA..."
+  echo "Command: $restart_cmd"
+  echo ""
+
+  # Execute in background
+  bash -c "$restart_cmd" &
+
+  echo "Waiting for CARLA to start (10 seconds)..."
+  sleep 10
+
+  if ss -tlnp 2>/dev/null | grep -q ":2000 " || netstat -tlnp 2>/dev/null | grep -q ":2000 "; then
+    echo "✓ CARLA restarted successfully with new settings!"
+  else
+    echo "⚠️  CARLA may still be starting. Check with: ps aux | grep CarlaUE4"
+  fi
+
+  echo ""
+  sleep 2
+}
+
 # Main interactive loop
 interactive_mode() {
   if ! check_carla; then
@@ -182,41 +309,61 @@ interactive_mode() {
         echo ""
         "$HELPER_PY" --list-maps
         echo ""
-        read -p "Press Enter to continue..."
+        echo "Press any key to return to menu..."
+        read -n 1 -s
         ;;
       2)
         select_map
         echo ""
-        read -p "Press Enter to continue..."
+        sleep 1
         ;;
       3)
         select_weather
         echo ""
-        read -p "Press Enter to continue..."
+        sleep 1
         ;;
       4)
         spawn_vehicle
         echo ""
-        read -p "Press Enter to continue..."
+        sleep 1
         ;;
       5)
         echo ""
         "$HELPER_PY" --list-vehicles
         echo ""
-        read -p "Press Enter to continue..."
+        echo "Press any key to return to menu..."
+        read -n 1 -s
         ;;
       6)
         move_camera
         echo ""
-        read -p "Press Enter to continue..."
+        sleep 1
         ;;
       7)
         echo ""
-        echo "Launching manual control (press Q or ESC to exit)..."
+        echo "=========================================="
+        echo "  Manual Control"
+        echo "=========================================="
         echo ""
+        echo "Controls:"
+        echo "  W/S         - Throttle/Brake"
+        echo "  A/D         - Steer left/right"
+        echo "  Space       - Handbrake"
+        echo "  Q or ESC    - Exit manual control"
+        echo ""
+        echo "Press any key to start..."
+        read -n 1 -s
+        echo ""
+
         "$HELPER_PY" --manual
+
+        # Auto-return to menu after manual control exits
         echo ""
-        read -p "Press Enter to continue..."
+        echo "Manual control ended. Returning to menu in 2 seconds..."
+        sleep 2
+        ;;
+      8)
+        change_quality
         ;;
       0)
         echo ""

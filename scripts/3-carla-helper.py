@@ -82,6 +82,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=float, default=8.0, help="RPC timeout seconds")
 
     parser.add_argument("--list-maps", action="store_true")
+    parser.add_argument("--raw", action="store_true", help="Raw output for scripting")
     parser.add_argument("--set-map", metavar="TOWN", help="Load a specific Town (e.g. Town04)")
     parser.add_argument("--list-vehicles", action="store_true", help="Print matching vehicle blueprints")
     parser.add_argument("--vehicle-filter", default="vehicle.*", help="Blueprint filter when listing/spawning")
@@ -107,10 +108,17 @@ def connect(host: str, port: int, timeout: float) -> carla.Client:
     return client
 
 
-def list_maps(client: carla.Client) -> None:
-    print("Available maps:")
-    for idx, town in enumerate(client.get_available_maps()):
-        print(f"  [{idx:02d}] {town}")
+def list_maps(client: carla.Client, raw: bool = False) -> None:
+    maps = client.get_available_maps()
+    if raw:
+        # Output raw map paths for scripting
+        for town in maps:
+            print(town)
+    else:
+        # Output formatted for human viewing
+        print("Available maps:")
+        for idx, town in enumerate(maps):
+            print(f"  [{idx:02d}] {town}")
 
 
 def list_vehicles(world: carla.World, bp_filter: str) -> None:
@@ -208,14 +216,30 @@ def main() -> None:
     client = connect(args.host, args.port, args.timeout)
 
     if args.list_maps:
-        list_maps(client)
+        list_maps(client, args.raw)
 
     world = client.get_world()
     if args.set_map:
-        if args.set_map not in client.get_available_maps():
-            raise RuntimeError(f"Unknown map {args.set_map}; run with --list-maps")
-        world = client.load_world(args.set_map)
-        time.sleep(1.0)
+        available_maps = client.get_available_maps()
+        # Try exact match first
+        target_map = args.set_map
+        if target_map not in available_maps:
+            # Try to find by partial name (e.g., "Town04" -> "/Game/Carla/Maps/Town04")
+            matches = [m for m in available_maps if args.set_map in m]
+            if len(matches) == 1:
+                target_map = matches[0]
+            elif len(matches) > 1:
+                print(f"Ambiguous map name '{args.set_map}'. Did you mean:")
+                for m in matches:
+                    print(f"  {m}")
+                raise RuntimeError("Please specify the full map name")
+            else:
+                raise RuntimeError(f"Unknown map '{args.set_map}'; run with --list-maps")
+
+        print(f"Loading map: {target_map}")
+        world = client.load_world(target_map)
+        time.sleep(2.0)
+        print(f"Map loaded successfully")
 
     if args.list_vehicles:
         list_vehicles(world, args.vehicle_filter)

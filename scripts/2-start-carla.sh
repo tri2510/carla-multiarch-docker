@@ -149,7 +149,7 @@ if $PRESET_SAFE; then
   CARLA_OPENGL="true"
 fi
 
-CARLA_QUALITY="${CARLA_QUALITY:-Low}"
+CARLA_QUALITY="${CARLA_QUALITY:-Medium}"
 CARLA_RES_X="${CARLA_RES_X:-800}"
 CARLA_RES_Y="${CARLA_RES_Y:-600}"
 CARLA_PORT="${CARLA_PORT:-2000}"
@@ -159,6 +159,28 @@ CARLA_OPENGL="${CARLA_OPENGL:-false}"
 CARLA_BENCHMARK="${CARLA_BENCHMARK:-false}"
 
 [ -d "$LOCAL_CARLA_DIR" ] || error "Run scripts/1-setup-carla.sh first (missing $LOCAL_CARLA_DIR)"
+
+# Check if port is already in use
+if ss -tlnp 2>/dev/null | grep -q ":$CARLA_PORT " || netstat -tlnp 2>/dev/null | grep -q ":$CARLA_PORT "; then
+  echo ""
+  echo "⚠️  Port $CARLA_PORT is already in use."
+  if ps aux | grep -q "[C]arlaUE4"; then
+    echo "Found existing CARLA process running."
+    echo ""
+    echo -n "Kill existing CARLA and start fresh? (y/N): "
+    read -r response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+      info "Killing existing CARLA process..."
+      pkill -f CarlaUE4 || true
+      sleep 2
+      info "Killed existing CARLA. Starting fresh..."
+    else
+      error "Cancelled. Please stop CARLA manually or use a different port (--rpc-port)"
+    fi
+  else
+    error "Port $CARLA_PORT is in use by another process (not CARLA). Please free the port first or use --rpc-port"
+  fi
+fi
 
 CARLA_LIB_DIRS=()
 for libdir in \
@@ -210,9 +232,29 @@ if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
   CARLA_ARGS+=("${EXTRA_ARGS[@]}")
 fi
 
+LOG_FILE="${CARLA_LOG_FILE:-$PROJECT_ROOT/carla.log}"
+
 info "Using CARLA install: $LOCAL_CARLA_DIR (version $CARLA_VERSION)"
 info "Command: $CARLA_CMD ${CARLA_ARGS[*]}"
-info "Press Ctrl+C to stop the simulator"
+info "Logs: $LOG_FILE"
+echo ""
 
 cd "$LOCAL_CARLA_DIR"
-exec "$CARLA_CMD" "${CARLA_ARGS[@]}"
+"$CARLA_CMD" "${CARLA_ARGS[@]}" > "$LOG_FILE" 2>&1 &
+CARLA_PID=$!
+
+echo "✓ CARLA started in background (PID: $CARLA_PID)"
+echo ""
+echo "Next steps:"
+echo "  • Run helper:  scripts/3-carla-helper.sh"
+echo "  • View logs:   tail -f $LOG_FILE"
+echo "  • Stop CARLA:  pkill -f CarlaUE4"
+echo ""
+
+# Wait a bit and check if it's still running
+sleep 3
+if ps -p $CARLA_PID > /dev/null 2>&1; then
+  info "CARLA is running successfully"
+else
+  error "CARLA failed to start. Check logs: $LOG_FILE"
+fi
