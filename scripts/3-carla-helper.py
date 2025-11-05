@@ -32,6 +32,7 @@ PY_API_SOURCE = CARLA_ROOT / "PythonAPI" / "carla"
 EXAMPLES_DIR = CARLA_ROOT / "PythonAPI" / "examples"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WHEEL_TEMPLATE = PROJECT_ROOT / "scripts" / "wheel-config-g29.ini"
+WHEEL_WRAPPER = PROJECT_ROOT / "scripts" / "manual_control_wheel_extended.py"
 
 
 def ensure_carla_on_path() -> None:
@@ -235,8 +236,10 @@ def ensure_default_wheel_config() -> Path:
 
 
 def run_manual_control(extra_args: Optional[List[str]], wheel: bool = False, wheel_config: Optional[str] = None) -> None:
-    script_name = "manual_control_steeringwheel.py" if wheel else "manual_control.py"
-    script_path = EXAMPLES_DIR / script_name
+    if wheel:
+        script_path = WHEEL_WRAPPER
+    else:
+        script_path = EXAMPLES_DIR / "manual_control.py"
     if not script_path.exists():
         raise RuntimeError(f"{script_name} not found at {script_path}")
     env = os.environ.copy()

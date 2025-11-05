@@ -226,6 +226,7 @@ launch_wheel_manual() {
   echo "  • Override via env: export CARLA_WHEEL_CONFIG=/path/to/wheel_config.ini"
   echo "  • Mapping guide: docs/LOGITECH_WHEEL.md"
   echo "  • Tap the brake pedal once to wake up the wheel"
+  echo "  • H-shifter supported (buttons configurable in wheel-config-g29.ini)"
   echo ""
   if ! wheel_detected; then
     echo "⚠️  No joystick detected. Connect the Logitech wheel, then press Enter to retry." 

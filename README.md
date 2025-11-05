@@ -57,8 +57,9 @@ scripts/3-carla-helper.sh --spawn vehicle.tesla.model3 --view chase
 scripts/3-carla-helper.sh --weather HardRainSunset
 scripts/3-carla-helper.sh --manual  # Drive with keyboard/wheel
 
-Need wheel support? Menu option 7 and `scripts/3-carla-helper.sh --manual-wheel`
-use the Logitech profile described in [docs/LOGITECH_WHEEL.md](docs/LOGITECH_WHEEL.md).
+Need wheel support? Menu option 7 (or `scripts/3-carla-helper.sh --manual-wheel`)
+uses the Logitech profile described in [docs/LOGITECH_WHEEL.md](docs/LOGITECH_WHEEL.md),
+including optional mappings for the H-pattern shifter.
 ```
 
 ### Customizing Startup
