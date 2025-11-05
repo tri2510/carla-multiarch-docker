@@ -46,6 +46,12 @@ docker compose up -d
 docker compose logs -f carla
 ```
 
+> **Tip:** The first build downloads a ~10 GB CARLA archive. Docker BuildKit
+> caches this file automatically (via `docker buildx` / compose v2), so future
+> builds reuse the cached tarball instead of re-downloading it. If you use the
+> legacy Docker CLI, export `DOCKER_BUILDKIT=1` before building to enable the
+> cache.
+
 ### Helper Wrapper (Direct Run)
 
 For a workflow similar to `/home/htr1hc/01_SDV/49_HPC_Farm/projects/carla-streaming`
@@ -64,7 +70,36 @@ scripts/run-local-carla.sh --logs        # tail logs
 The wrapper sources `.env` (if present) and lets you override CARLA quality,
 resolution, offscreen/OpenGL modes, ports, controller type, DISPLAY, and GPU
 visibility via CLI flags—handy when you need to tweak options without editing
-configuration files.
+configuration files. It automatically builds the image the first time it runs
+and then skips rebuilds (`docker compose up --no-build`) so subsequent launches
+are instant; use `--build` to force a rebuild when you change the Dockerfile.
+
+### Host-Only Smoke Test (No Docker)
+
+Need a quicker iteration loop on this PC before containerizing? Download the
+CARLA 0.9.15 tarball once and run it directly from the repo:
+
+```bash
+# 1. Fetch/extract CARLA into ./local_carla (tarball cached under ~/.cache/carla)
+scripts/setup-local-carla.sh
+
+# 2. Launch with the same CARLA_* env toggles you use for Docker
+scripts/run-host-carla.sh --preset safe
+
+# Optional: pass extra Unreal arguments after --
+scripts/run-host-carla.sh -- --fps=20
+
+# Reuse an existing backup tarball instead of downloading (~8GB)
+scripts/setup-local-carla.sh --tarball /path/to/CARLA_0.9.15.tar.gz
+
+# Only fetch from the CDN when explicitly requested
+# scripts/setup-local-carla.sh --force-download
+```
+
+The host launcher sources `.env`, so quality, ports, and controller settings
+stay in sync with the container workflow. When you're ready to migrate back to
+Docker, stop the host process (`Ctrl+C`) and run `scripts/run-local-carla.sh --build`
+to rebuild the image using the tested configuration.
 
 ### Jetson Orin (Client Mode)
 
@@ -130,6 +165,36 @@ docker compose exec carla python3 /home/carla/scripts/manual_control_wheel.py
 - Middle Pedal → Brake
 - Left Pedal → Clutch
 - ESC/Q → Quit
+
+### Wheel Detection / Calibration
+
+```bash
+# Run inside the container to verify Logitech wheel axes/buttons
+docker compose exec carla python3 /home/carla/scripts/wheel_detection.py
+```
+
+The helper prints live axis/button values so you can confirm the wheel is visible
+to CARLA before launching the manual control script.
+
+### Stream Speed/RPM to KUKSA VSS
+
+Run the bridge inside the CARLA container to forward telemetry to a local KUKSA
+databroker (default `Vehicle.Speed` and
+`Vehicle.Powertrain.CombustionEngine.Speed`):
+
+```bash
+docker compose exec carla python3 /home/carla/scripts/carla_vss_bridge.py \
+  --kuksa-host 172.17.0.1 --kuksa-port 55555 --vehicle-role-name hero
+```
+
+- Adjust `--kuksa-host` to the address reachable from inside the container
+  (`172.17.0.1` corresponds to the Linux host; use `host.docker.internal` on
+  macOS/Windows Docker).
+- `--max-speed-kmh`, `--rpm-idle`, and `--rpm-max` shape the linear mapping from
+  vehicle speed to RPM.
+
+Use `--vehicle-id` if you want to pin to a specific CARLA actor id instead of a
+`role_name`.
 
 ### Python API Examples
 
@@ -262,13 +327,17 @@ docker compose restart carla
 ├── docker-compose.yml              # x86 deployment
 ├── docker-compose.jetson-client.yml# Jetson deployment
 ├── scripts/
-│   └── run-local-carla.sh          # Local helper wrapper
+│   ├── run-local-carla.sh          # Docker helper wrapper
+│   ├── run-host-carla.sh           # Launch unpacked CARLA on host
+│   └── setup-local-carla.sh        # Download/unpack CARLA binary
 ├── container_scripts/
 │   ├── start-carla.sh              # Container startup script
 │   ├── setup-display.sh            # Display setup
 │   ├── setup-controller.sh         # Controller setup
 │   ├── carla-config.py             # Config helper
-│   └── manual_control_wheel.py     # Wheel control
+│   ├── manual_control_wheel.py     # Wheel control
+│   ├── wheel_detection.py          # Wheel detection helper
+│   └── carla_vss_bridge.py         # CARLA → KUKSA bridge
 ├── examples/
 │   └── jetson_client_example.py    # Jetson example
 └── README.md                       # This file

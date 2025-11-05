@@ -9,6 +9,22 @@ Get CARLA running in 5 minutes!
 ./quickstart.sh
 ```
 
+## Need a Fast Host-Only Test?
+
+Skip Docker, download CARLA once, and run it directly on this machine:
+
+```bash
+cd /home/htr1hc/01_SDV/72_carla_arm
+scripts/setup-local-carla.sh                      # downloads (~8GB) + extracts
+scripts/run-host-carla.sh --preset safe
+
+# Reuse a pre-downloaded archive
+# scripts/setup-local-carla.sh --tarball /path/CARLA_0.9.15.tar.gz
+```
+
+The launcher reuses `.env`, so when you switch back to Docker the same
+resolution/quality settings carry over.
+
 ## For x86_64 (Desktop/Laptop)
 
 ### Prerequisites
@@ -97,6 +113,18 @@ docker compose exec carla python3 /home/carla/scripts/manual_control_wheel.py
 docker compose exec carla python3 /home/carla/PythonAPI/examples/manual_control.py
 ```
 
+### Publish Telemetry to KUKSA
+
+```bash
+# Stream Vehicle.Speed and Engine RPM to a local KUKSA server
+docker compose exec carla python3 /home/carla/scripts/carla_vss_bridge.py \
+  --kuksa-host 172.17.0.1 --kuksa-port 55555
+```
+
+Adjust the host address as needed (use `host.docker.internal` on macOS/Windows).
+`--max-speed-kmh`, `--rpm-idle`, and `--rpm-max` tune the mapping if your
+dashboard expects a different range.
+
 ### Python Examples
 
 ```bash
@@ -154,6 +182,9 @@ xhost +local:docker
 ```bash
 ./container_scripts/setup-controller.sh
 sudo chmod a+rw /dev/input/*
+
+# Verify inside container
+docker compose exec carla python3 /home/carla/scripts/wheel_detection.py
 ```
 
 ### Low FPS?
@@ -214,7 +245,9 @@ Check the full documentation:
 │   ├── setup-display.sh      # Display setup
 │   ├── setup-controller.sh   # Controller setup
 │   ├── carla-config.py       # Config helper
-│   └── manual_control_wheel.py
+│   ├── manual_control_wheel.py
+│   ├── wheel_detection.py    # Wheel detection helper
+│   └── carla_vss_bridge.py   # CARLA → KUKSA bridge
 ├── configs/                  # Your configs
 ├── data/                     # Persistent data
 └── logs/                     # Log files
