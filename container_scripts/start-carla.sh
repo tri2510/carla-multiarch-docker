@@ -90,14 +90,16 @@ echo ""
 CARLA_HOME="/home/carla"
 CARLA_CMD=""
 
-if [ -f "$CARLA_HOME/CarlaUE5.sh" ]; then
-    CARLA_CMD="$CARLA_HOME/CarlaUE5.sh"
-    echo "Detected Unreal Engine 5 build (CarlaUE5.sh)"
-elif [ -f "$CARLA_HOME/CarlaUE4.sh" ]; then
-    CARLA_CMD="$CARLA_HOME/CarlaUE4.sh"
-    echo "Detected Unreal Engine 4 build (CarlaUE4.sh)"
-else
-    echo "Error: Could not find CarlaUE5.sh or CarlaUE4.sh in $CARLA_HOME" >&2
+for candidate in CarlaUE5.sh CarlaUE4.sh CarlaUnreal.sh; do
+    if [ -f "$CARLA_HOME/$candidate" ]; then
+        CARLA_CMD="$CARLA_HOME/$candidate"
+        echo "Detected CARLA launcher ($candidate)"
+        break
+    fi
+done
+
+if [ -z "$CARLA_CMD" ]; then
+    echo "Error: Could not find CarlaUE5.sh, CarlaUE4.sh, or CarlaUnreal.sh in $CARLA_HOME" >&2
     exit 1
 fi
 

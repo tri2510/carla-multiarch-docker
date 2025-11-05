@@ -293,6 +293,9 @@ EOF
 # Start manual control
 docker compose exec carla python3 /home/carla/scripts/manual_control_wheel.py
 
+# Wheel detection / calibration
+docker compose exec carla python3 /home/carla/scripts/wheel_detection.py
+
 # Or use CARLA's example
 docker compose exec carla python3 /home/carla/PythonAPI/examples/manual_control.py
 ```

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Utility helper to manage a running CARLA host session (0.9.x).
+"""Step 3: CARLA Helper - Manage Running CARLA Session
+
+This helper lets you control a running CARLA simulator (started with 2-start-carla.sh).
 
 Features:
-  * List and switch maps
-  * Spawn/destroy the hero vehicle with chosen blueprint/colors
-  * Tweak weather presets
-  * Jump the spectator camera to common views (chase/top/fpv)
-  * Launch the manual_control.py example for driving input
+  * List and switch maps (Town01, Town02, etc.)
+  * Spawn/destroy vehicles with custom blueprints and colors
+  * Change weather presets (ClearNoon, HardRainSunset, etc.)
+  * Move spectator camera (chase/front/top views)
+  * Launch manual control for keyboard/wheel driving
 
-The helper connects to an already running simulator started via
-`scripts/run-host-carla.sh` (or any CARLA 0.9.x server).
+The helper connects to a running CARLA simulator (any CARLA 0.9.x server).
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ EXAMPLES_DIR = CARLA_ROOT / "PythonAPI" / "examples"
 
 def ensure_carla_on_path() -> None:
     if not CARLA_ROOT.exists():
-        print("[helper] local_carla directory is missing; run scripts/setup-local-carla.sh first", file=sys.stderr)
+        print("[helper] local_carla directory is missing; run scripts/1-setup-carla.sh first", file=sys.stderr)
         sys.exit(2)
     eggs = sorted(PY_API_DIST.glob("carla-*.egg"))
     if not eggs:
@@ -71,7 +72,10 @@ VIEW_CHOICES = ["chase", "front", "top", "free"]
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Host CARLA helper")
+    parser = argparse.ArgumentParser(
+        description="Step 3: CARLA Helper - Manage running CARLA session",
+        epilog="Make sure CARLA is running (use 2-start-carla.sh first)"
+    )
     parser.add_argument("action", nargs="*", help="Optional description of planned actions (for logging only)")
     parser.add_argument("--host", default="127.0.0.1", help="CARLA host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=2000, help="RPC port (default: 2000)")

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Launch the locally unpacked CARLA simulator without Docker for quick testing.
+# Step 2: Start CARLA Simulator
+# Launch the locally unpacked CARLA simulator (run 1-setup-carla.sh first)
 
 set -euo pipefail
 
@@ -11,29 +12,37 @@ CARLA_VERSION="${CARLA_VERSION:-0.9.15}"
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/run-host-carla.sh [options] [-- extra Unreal args]
+Usage: scripts/2-start-carla.sh [options] [-- extra Unreal args]
+
+Start the CARLA simulator locally (make sure to run 1-setup-carla.sh first)
+
+Quick Start:
+  scripts/2-start-carla.sh              # Start with default settings
+  scripts/2-start-carla.sh --preset safe  # Start with safe settings (Medium quality, OpenGL)
 
 Options:
-  -q, --quality LEVEL      Low|Medium|High|Epic (default from .env or Epic)
-  -r, --resolution WxH     Resolution override (e.g. 1920x1080)
-      --rpc-port PORT      RPC port (default 2000)
-      --stream-port PORT   Streaming port (default 2001)
+  -q, --quality LEVEL      Low|Medium|High|Epic (default: Epic)
+  -r, --resolution WxH     Resolution (e.g. 1920x1080, default: 1920x1080)
+      --rpc-port PORT      RPC port (default: 2000)
+      --stream-port PORT   Streaming port (default: 2001)
       --offscreen          Enable off-screen rendering
       --onscreen           Disable off-screen rendering
       --opengl             Force OpenGL renderer
-      --vulkan             Force Vulkan renderer
+      --vulkan             Force Vulkan renderer (default)
       --benchmark          Enable UE benchmark mode at 30 FPS
+      --preset safe        Apply safe preset (Medium quality, OpenGL, 1280x720)
       --carla-dir PATH     Alternate CARLA install directory
       --env-file FILE      Source env file before running
-      --preset NAME        Apply a preset (safe)
   -h, --help               Show this help
 
 Any arguments after "--" are passed directly to CarlaUE{4,5}.sh.
+
+While CARLA is running, use 3-carla-helper.py to manage maps, vehicles, and weather.
 USAGE
 }
 
-error() { printf '[run-host-carla][ERROR] %s\n' "$*" >&2; exit 1; }
-info() { printf '[run-host-carla] %s\n' "$*"; }
+error() { printf '[2-start-carla][ERROR] %s\n' "$*" >&2; exit 1; }
+info() { printf '[2-start-carla] %s\n' "$*"; }
 
 source_env() {
   if [ -f "$ENV_FILE" ]; then
@@ -121,6 +130,7 @@ export __NV_PRIME_RENDER_OFFLOAD=1
 export __GLX_VENDOR_LIBRARY_NAME=nvidia
 export __VK_LAYER_NV_optimus=NVIDIA_only
 export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+export SDL_VIDEODRIVER=x11
 
 source_env
 for kv in "${LOCAL_ARGS[@]}"; do
@@ -139,16 +149,16 @@ if $PRESET_SAFE; then
   CARLA_OPENGL="true"
 fi
 
-CARLA_QUALITY="${CARLA_QUALITY:-Epic}"
-CARLA_RES_X="${CARLA_RES_X:-1920}"
-CARLA_RES_Y="${CARLA_RES_Y:-1080}"
+CARLA_QUALITY="${CARLA_QUALITY:-Low}"
+CARLA_RES_X="${CARLA_RES_X:-800}"
+CARLA_RES_Y="${CARLA_RES_Y:-600}"
 CARLA_PORT="${CARLA_PORT:-2000}"
 CARLA_STREAMING_PORT="${CARLA_STREAMING_PORT:-2001}"
 CARLA_OFFSCREEN="${CARLA_OFFSCREEN:-false}"
 CARLA_OPENGL="${CARLA_OPENGL:-false}"
 CARLA_BENCHMARK="${CARLA_BENCHMARK:-false}"
 
-[ -d "$LOCAL_CARLA_DIR" ] || error "Run scripts/setup-local-carla.sh first (missing $LOCAL_CARLA_DIR)"
+[ -d "$LOCAL_CARLA_DIR" ] || error "Run scripts/1-setup-carla.sh first (missing $LOCAL_CARLA_DIR)"
 
 CARLA_LIB_DIRS=()
 for libdir in \
@@ -189,9 +199,11 @@ fi
 CARLA_ARGS=()
 [[ "$CARLA_OFFSCREEN" == "true" ]] && CARLA_ARGS+=("-RenderOffScreen")
 [[ "$CARLA_OPENGL" == "true" ]] && CARLA_ARGS+=("-opengl")
+[[ "$CARLA_OPENGL" == "false" && "$CARLA_OFFSCREEN" == "false" ]] && CARLA_ARGS+=("-vulkan")
 [[ "$CARLA_BENCHMARK" == "true" ]] && CARLA_ARGS+=("-benchmark" "-fps=30")
 CARLA_ARGS+=("-quality-level=$CARLA_QUALITY")
 CARLA_ARGS+=("-ResX=$CARLA_RES_X" "-ResY=$CARLA_RES_Y")
+CARLA_ARGS+=("-windowed")
 CARLA_ARGS+=("-carla-rpc-port=$CARLA_PORT" "-carla-streaming-port=$CARLA_STREAMING_PORT")
 CARLA_ARGS+=("-prefernvidia")
 if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then

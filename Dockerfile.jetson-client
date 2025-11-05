@@ -31,7 +31,8 @@ RUN pip3 install --no-cache-dir \
     pillow \
     opencv-python \
     pyyaml \
-    matplotlib
+    matplotlib \
+    kuksa-client
 
 # Install additional tools for autonomous driving
 RUN pip3 install --no-cache-dir \

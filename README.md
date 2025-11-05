@@ -26,7 +26,52 @@ Docker setup for CARLA simulator with display support and Logitech wheel integra
 
 ## Quick Start
 
-### x86_64 Desktop/Server
+### 🚀 Simple 3-Step Workflow (Recommended)
+
+Run CARLA directly on your host machine with these 3 simple scripts:
+
+```bash
+# Clone repository
+git clone https://github.com/tri2510/carla-multiarch-docker.git
+cd carla-multiarch-docker
+
+# Step 1: Download and setup CARLA (run once, ~10GB download)
+scripts/1-setup-carla.sh
+
+# Step 2: Start CARLA simulator
+scripts/2-start-carla.sh
+
+# Step 3: In another terminal, use interactive helper
+scripts/3-carla-helper.sh                                                # Interactive menu
+
+# Or use directly with arguments:
+scripts/3-carla-helper.sh --list-maps                                    # List available maps
+scripts/3-carla-helper.sh --set-map Town04                               # Switch to Town04
+scripts/3-carla-helper.sh --spawn vehicle.tesla.model3 --view chase      # Spawn vehicle
+scripts/3-carla-helper.sh --weather HardRainSunset                       # Change weather
+scripts/3-carla-helper.sh --manual                                       # Drive with keyboard/wheel
+```
+
+**Common Options:**
+```bash
+# Start with safe settings (Medium quality, OpenGL, 1280x720)
+scripts/2-start-carla.sh --preset safe
+
+# Start with custom quality and resolution
+scripts/2-start-carla.sh --quality High --resolution 1920x1080
+
+# Use OpenGL instead of Vulkan (better compatibility)
+scripts/2-start-carla.sh --opengl
+
+# Get help for any script
+scripts/1-setup-carla.sh --help
+scripts/2-start-carla.sh --help
+scripts/3-carla-helper.sh --help
+```
+
+### Alternative: Docker Compose (x86_64)
+
+If you prefer containerized deployment:
 
 ```bash
 # Clone repository
@@ -52,13 +97,12 @@ docker compose logs -f carla
 > legacy Docker CLI, export `DOCKER_BUILDKIT=1` before building to enable the
 > cache.
 
-### Helper Wrapper (Direct Run)
+### Alternative: Docker Helper Wrapper
 
-For a workflow similar to `/home/htr1hc/01_SDV/49_HPC_Farm/projects/carla-streaming`
-that focuses only on the simulator, use the new helper:
+For Docker workflow with command-line overrides:
 
 ```bash
-# Launch CARLA with ad-hoc overrides (no streaming stack)
+# Launch CARLA with ad-hoc overrides
 scripts/run-local-carla.sh --quality High --resolution 2560x1440 --offscreen
 
 # Other actions
@@ -69,53 +113,9 @@ scripts/run-local-carla.sh --logs        # tail logs
 
 The wrapper sources `.env` (if present) and lets you override CARLA quality,
 resolution, offscreen/OpenGL modes, ports, controller type, DISPLAY, and GPU
-visibility via CLI flags—handy when you need to tweak options without editing
-configuration files. It automatically builds the image the first time it runs
+visibility via CLI flags. It automatically builds the image the first time it runs
 and then skips rebuilds (`docker compose up --no-build`) so subsequent launches
 are instant; use `--build` to force a rebuild when you change the Dockerfile.
-
-### Host-Only Smoke Test (No Docker)
-
-Need a quicker iteration loop on this PC before containerizing? Download the
-CARLA 0.9.15 tarball once and run it directly from the repo:
-
-```bash
-# 1. Fetch/extract CARLA into ./local_carla (tarball cached under ~/.cache/carla)
-scripts/setup-local-carla.sh
-
-# 2. Launch with the same CARLA_* env toggles you use for Docker
-scripts/run-host-carla.sh --preset safe
-
-# 3. Manage the running session (map, car, weather, manual control)
-scripts/host-carla-helper.py --list-maps
-scripts/host-carla-helper.py --set-map Town04 --spawn vehicle.tesla.model3 --view chase
-scripts/host-carla-helper.py --manual --manual-args --res 1280x720
-
-# Optional: pass extra Unreal arguments after --
-scripts/run-host-carla.sh -- --fps=20
-
-# Reuse an existing backup tarball instead of downloading (~8GB)
-scripts/setup-local-carla.sh --tarball /path/to/CARLA_0.9.15.tar.gz
-
-# Only fetch from the CDN when explicitly requested
-# scripts/setup-local-carla.sh --force-download
-```
-
-The host launcher sources `.env`, so quality, ports, and controller settings
-stay in sync with the container workflow. When you're ready to migrate back to
-Docker, stop the host process (`Ctrl+C`) and run `scripts/run-local-carla.sh --build`
-to rebuild the image using the tested configuration.
-
-Use `scripts/host-carla-helper.py --help` to explore the available tweaks:
-
-- `--set-map Town05` reloads a different map without restarting the simulator
-- `--spawn vehicle.audi.tt --view front` respawns your hero vehicle and aligns
-  the spectator camera
-- `--weather HardRainSunset` switches the current weather preset
-- `--manual` reuses CARLA's `manual_control.py` example for keyboard/controller
-
-All helper actions work against the simulator launched via `scripts/run-host-carla.sh`
-as long as the RPC port (default 2000) is reachable.
 
 ### Jetson Orin (Client Mode)
 
@@ -343,10 +343,11 @@ docker compose restart carla
 ├── docker-compose.yml              # x86 deployment
 ├── docker-compose.jetson-client.yml# Jetson deployment
 ├── scripts/
-│   ├── run-local-carla.sh          # Docker helper wrapper
-│   ├── run-host-carla.sh           # Launch unpacked CARLA on host
-│   ├── host-carla-helper.py        # Runtime map/vehicle/weather helper
-│   └── setup-local-carla.sh        # Download/unpack CARLA binary
+│   ├── 1-setup-carla.sh            # Step 1: Download/setup CARLA (~10GB)
+│   ├── 2-start-carla.sh            # Step 2: Start CARLA simulator
+│   ├── 3-carla-helper.sh           # Step 3: Interactive helper (maps/vehicles/weather)
+│   ├── 3-carla-helper.py           # Python helper (called by .sh wrapper)
+│   └── run-local-carla.sh          # Docker compose wrapper (alternative)
 ├── container_scripts/
 │   ├── start-carla.sh              # Container startup script
 │   ├── setup-display.sh            # Display setup

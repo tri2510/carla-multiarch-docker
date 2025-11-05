@@ -10,11 +10,13 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 SERVICE_NAME="carla"
 ENV_FILE="$PROJECT_ROOT/.env"
+IMAGE_NAME="${IMAGE_NAME:-carla-multiarch:latest}"
 
 ACTION="start"
 DETACH=true
 BUILD=false
 FOLLOW_LOGS=false
+AUTO_IMAGE_CHECK=true
 
 QUALITY_OVERRIDE=""
 RES_X_OVERRIDE=""
@@ -63,7 +65,9 @@ Common overrides:
 Execution control:
       --compose-file PATH      Use a different docker compose file
       --service NAME           Override service name (default: carla)
+      --image NAME             Override image name (default: carla-multiarch:latest)
       --build                  Run docker compose build before start
+      --no-auto-build          Skip automatic image existence check
   -a, --attach                 Run in the foreground (no -d)
   -d, --detach                 Run in detached mode (default)
       --env-file PATH          Source an alternative .env before running
@@ -205,10 +209,18 @@ while [[ $# -gt 0 ]]; do
       SERVICE_NAME="$2"
       shift
       ;;
+    --image)
+      [[ $# -lt 2 ]] && error "--image requires a name"
+      IMAGE_NAME="$2"
+      shift
+      ;;
     --env-file)
       [[ $# -lt 2 ]] && error "--env-file requires a path"
       ENV_FILE="$2"
       shift
+      ;;
+    --no-auto-build)
+      AUTO_IMAGE_CHECK=false
       ;;
     -h|--help)
       print_usage
@@ -265,19 +277,34 @@ run_compose() {
   fi
 }
 
+image_exists() {
+  docker image inspect "$IMAGE_NAME" >/dev/null 2>&1
+}
+
 start_service() {
+  local up_args=()
+
   if [[ "$BUILD" == true ]]; then
     info "Building $SERVICE_NAME image..."
     run_compose build "$SERVICE_NAME"
+  elif [[ "$AUTO_IMAGE_CHECK" == true ]]; then
+    if image_exists; then
+      info "Image $IMAGE_NAME found locally; skipping build"
+      up_args+=(--no-build)
+    else
+      info "Image $IMAGE_NAME not found; building before start"
+      run_compose build "$SERVICE_NAME"
+    fi
   fi
 
-  local args=("$SERVICE_NAME")
   if [[ "$DETACH" == true ]]; then
-    args=(-d "$SERVICE_NAME")
+    up_args+=(-d)
   fi
+
+  up_args+=("$SERVICE_NAME")
 
   info "Starting $SERVICE_NAME via docker compose"
-  run_compose up "${args[@]}"
+  run_compose up "${up_args[@]}"
 }
 
 case "$ACTION" in

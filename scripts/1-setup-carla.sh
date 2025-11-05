@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Download and unpack the CARLA Linux binary into the repo for host execution.
+# Step 1: Setup CARLA
+# Download and unpack the CARLA Linux binary (~10GB) for local execution.
+# Run this once before using 2-start-carla.sh
 
 set -euo pipefail
 
@@ -21,18 +23,29 @@ fi
 STRIP_COMPONENTS="${CARLA_STRIP_COMPONENTS:-$DEFAULT_STRIP}"
 FORCE_DOWNLOAD=false
 
-log() { printf '[setup-local-carla] %s\n' "$*"; }
-err() { printf '[setup-local-carla][ERROR] %s\n' "$*" >&2; exit 1; }
+log() { printf '[1-setup-carla] %s\n' "$*"; }
+err() { printf '[1-setup-carla][ERROR] %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/setup-local-carla.sh [--force-download] [--tarball PATH]
+Usage: scripts/1-setup-carla.sh [--force-download] [--tarball PATH]
 
+Step 1: Download and setup CARLA (~10GB download)
+
+This script downloads and unpacks CARLA to local_carla/ directory.
+Run this once before starting CARLA with 2-start-carla.sh.
+
+Options:
   --force-download   Always fetch CARLA even if the tarball exists
   --tarball PATH     Use an existing CARLA archive at PATH (skips download)
+  -h, --help         Show this help
 
 Environment overrides:
   CARLA_VERSION, CARLA_TARBALL_PATH, CARLA_CACHE_DIR, LOCAL_CARLA_DIR
+
+Example:
+  scripts/1-setup-carla.sh                           # Download and setup
+  scripts/1-setup-carla.sh --tarball ~/CARLA.tar.gz # Use existing tarball
 USAGE
 }
 
@@ -130,11 +143,11 @@ check_binaries() {
 }
 
 main() {
-  log "Preparing CARLA $CARLA_VERSION in $INSTALL_DIR"
+  log "Step 1: Setting up CARLA $CARLA_VERSION in $INSTALL_DIR"
   ensure_tarball_valid
   unpack_tarball
   check_binaries
-  log "Done"
+  log "Setup complete! Next step: run scripts/2-start-carla.sh to start CARLA"
 }
 
 main "$@"

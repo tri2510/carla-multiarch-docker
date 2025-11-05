@@ -5,7 +5,7 @@ ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
 # Base stage - common dependencies
-FROM ubuntu:20.04 as base
+FROM ubuntu:22.04 as base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -74,7 +74,8 @@ RUN pip3 install --no-cache-dir \
     pyyaml \
     argparse \
     pyserial \
-    inputs
+    inputs \
+    kuksa-client
 
 # Create carla user
 RUN useradd -m -s /bin/bash carla && \
@@ -96,14 +97,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV CARLA_VERSION=0.10.0
 ENV CARLA_TARBALL=Carla-${CARLA_VERSION}-Linux-Shipping.tar.gz
 ENV CARLA_DOWNLOAD_URL=https://carla-releases.b-cdn.net/Linux/${CARLA_TARBALL}
-RUN wget --progress=dot:giga "${CARLA_DOWNLOAD_URL}" -O "${CARLA_TARBALL}" && \
-    tar -xzf "${CARLA_TARBALL}" && \
-    rm "${CARLA_TARBALL}" && \
+RUN --mount=type=cache,target=/tmp/carla_cache \
+    set -e && \
+    CACHE_DIR=/tmp/carla_cache && \
+    mkdir -p "$CACHE_DIR" && \
+    cd "$CACHE_DIR" && \
+    if [ ! -f "$CARLA_TARBALL" ]; then \
+      echo "Downloading ${CARLA_TARBALL}..." && \
+      apt-get update && apt-get install -y --no-install-recommends aria2 && \
+      rm -rf /var/lib/apt/lists/* && \
+      aria2c --console-log-level=warn --summary-interval=15 \
+        --max-connection-per-server=16 --split=16 --min-split-size=5M \
+        -o "$CARLA_TARBALL" "$CARLA_DOWNLOAD_URL"; \
+    else \
+      echo "Using cached ${CARLA_TARBALL}"; \
+    fi && \
+    cp "$CARLA_TARBALL" /home/carla/ && \
+    cd /home/carla && \
+    tar -xzf "$CARLA_TARBALL" --strip-components=1 && \
+    rm "$CARLA_TARBALL" && \
     chown -R carla:carla /home/carla
 
-# Install CARLA Python API
-RUN cd /home/carla/PythonAPI/carla/dist && \
-    pip3 install carla-*-cp3*-linux_x86_64.whl
+# Install CARLA Python API (wheel when compatible, else fall back to egg)
+RUN set -euo pipefail && \
+    cd /home/carla/PythonAPI/carla/dist && \
+    python3 -m pip install --upgrade pip setuptools wheel && \
+    if python3 -m pip install carla-*-cp3*-linux_x86_64.whl; then \
+        echo "Installed CARLA wheel"; \
+    else \
+        echo "Wheel install failed, falling back to egg" && \
+        python3 -m easy_install carla-*.egg; \
+    fi
 
 # ARM64 stage - build from source or use community builds
 FROM base as carla-arm64
