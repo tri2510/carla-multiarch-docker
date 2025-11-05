@@ -8,6 +8,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 HELPER_PY="$SCRIPT_DIR/3-carla-helper.py"
 
+# Common keyboard shortcuts shown before launching manual control
+print_keyboard_shortcuts() {
+  echo "Keyboard shortcuts:"
+  echo "  W / S      - Throttle / Brake"
+  echo "  A / D      - Steer left / right"
+  echo "  Space      - Handbrake"
+  echo "  Q          - Toggle reverse gear"
+  echo "  M          - Toggle manual transmission"
+  echo "  , / .      - Gear down / up (manual)"
+  echo "  TAB        - Change camera position"
+  echo "  \` or N    - Next sensor"
+  echo "  [1-9]      - Select sensor"
+  echo "  P          - Toggle autopilot"
+  echo "  F1         - Toggle HUD"
+  echo "  H / ?      - Toggle help"
+  echo "  R          - Toggle camera recording"
+  echo "  ESC        - Exit manual control"
+}
+
 # Detect wheel availability via pygame (returns 0 if at least one joystick)
 wheel_detected() {
   python3 - <<'PY' >/dev/null 2>&1
@@ -475,21 +494,3 @@ else
   # No arguments, run interactive mode
   interactive_mode
 fi
-# Common keyboard shortcuts shown before launching manual control
-print_keyboard_shortcuts() {
-  echo "Keyboard shortcuts:" 
-  echo "  W / S      - Throttle / Brake"
-  echo "  A / D      - Steer left / right"
-  echo "  Space      - Handbrake"
-  echo "  Q          - Toggle reverse gear"
-  echo "  M          - Toggle manual transmission"
-  echo "  , / .      - Gear down / up (manual)"
-  echo "  TAB        - Change camera position"
-  echo "  \` or N    - Next sensor"
-  echo "  [1-9]      - Select sensor"
-  echo "  P          - Toggle autopilot"
-  echo "  F1         - Toggle HUD"
-  echo "  H / ?      - Toggle help"
-  echo "  R          - Toggle camera recording"
-  echo "  ESC        - Exit manual control"
-}
