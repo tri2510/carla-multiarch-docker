@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install/verify NVIDIA driver + Vulkan ICDs on Ubuntu to satisfy CARLA/UE
+# Install NVIDIA graphics-drivers PPA + driver + Vulkan tooling on Ubuntu
 
 set -euo pipefail
 
@@ -15,21 +15,6 @@ fi
 
 log() { printf '[install-vulkan-support] %s\n' "$*"; }
 
-ensure_volian_key() {
-  local list_file="/etc/apt/sources.list.d/volian-archive-scar-unstable.list"
-  local keyring="/usr/share/keyrings/volian-archive-scar.gpg"
-  if [[ -f "$list_file" && ! -f "$keyring" ]]; then
-    log "Missing Volian repo key; importing..."
-    if command -v curl >/dev/null 2>&1; then
-      curl -fsSL https://deb.volian.org/volian/scar.key | gpg --dearmor > "$keyring"
-    elif command -v wget >/dev/null 2>&1; then
-      wget -qO- https://deb.volian.org/volian/scar.key | gpg --dearmor > "$keyring"
-    else
-      log "WARNING: curl/wget unavailable; cannot import Volian repo key"
-    fi
-  fi
-}
-
 replace_broken_mirrors() {
   local bad_mirror="https://cesium.di.uminho.pt/pub/ubuntu-archive"
   local fallback="http://archive.ubuntu.com/ubuntu"
@@ -43,70 +28,77 @@ replace_broken_mirrors() {
 }
 
 prepare_apt_sources() {
-  ensure_volian_key
   replace_broken_mirrors
 }
 
-APT_PACKAGES=(
-  ubuntu-drivers-common
-  vulkan-utils
-  mesa-vulkan-drivers
-  mesa-vulkan-drivers:i386
-)
+BASE_PACKAGES=(software-properties-common ubuntu-drivers-common)
 
 prepare_apt_sources
 
-log "Updating apt index..."
-apt-get update -y >/dev/null
+log "Installing base packages: ${BASE_PACKAGES[*]}"
+DEBIAN_FRONTEND=noninteractive apt-get install -y "${BASE_PACKAGES[@]}"
 
-log "Installing Vulkan prerequisites: ${APT_PACKAGES[*]}"
-DEBIAN_FRONTEND=noninteractive apt-get install -y "${APT_PACKAGES[@]}"
+if ! grep -R "graphics-drivers/ppa" /etc/apt/sources.list /etc/apt/sources.list.d >/dev/null 2>&1; then
+  log "Adding graphics-drivers PPA"
+  add-apt-repository -y ppa:graphics-drivers/ppa
+else
+  log "graphics-drivers PPA already present"
+fi
+
+log "Updating apt index..."
+apt-get update -y
+
+log "Upgrading existing packages..."
+DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 
 recommend_driver() {
-  if ! command -v ubuntu-drivers >/dev/null 2>&1; then
-    return 1
-  fi
   ubuntu-drivers devices 2>/dev/null | awk '/recommended/ {print $3; exit}'
 }
 
-CURRENT_DRIVER="$(command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1 || true)"
-RECOMMENDED_DRIVER="$(recommend_driver || true)"
-
-if [[ -n "$RECOMMENDED_DRIVER" ]]; then
-  if dpkg -s "$RECOMMENDED_DRIVER" >/dev/null 2>&1; then
-    log "Recommended driver $RECOMMENDED_DRIVER already installed (nvidia-smi reports version ${CURRENT_DRIVER:-unknown})."
+install_driver() {
+  local pkg="$(recommend_driver)"
+  if [[ -z "$pkg" ]]; then
+    pkg="nvidia-driver-535"
+    log "Falling back to $pkg"
   else
-    log "Installing recommended NVIDIA driver: $RECOMMENDED_DRIVER"
-    DEBIAN_FRONTEND=noninteractive apt-get install -y "$RECOMMENDED_DRIVER"
-    log "Driver installed. Reboot is recommended before running CARLA."
+    log "Recommended driver: $pkg"
   fi
-else
-  log "Could not auto-detect a recommended driver. Skipping driver install (ensure NVIDIA drivers are present)."
-fi
+  if dpkg -s "$pkg" >/dev/null 2>&1; then
+    log "Driver $pkg already installed"
+  else
+    log "Installing $pkg"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y "$pkg"
+  fi
+}
 
-# Ensure NVIDIA ICD JSON exists for Vulkan
+install_driver
+
+log "Installing Vulkan packages (nvidia-settings vulkan vulkan-utils mesa-vulkan-drivers{,:i386})"
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  nvidia-settings \
+  vulkan \
+  vulkan-utils \
+  mesa-vulkan-drivers \
+  mesa-vulkan-drivers:i386
+
 DEFAULT_ICD="/usr/share/vulkan/icd.d/nvidia_icd.json"
 if [[ -f "$DEFAULT_ICD" ]]; then
-  log "Found Vulkan ICD: $DEFAULT_ICD"
+  log "Vulkan ICD found: $DEFAULT_ICD"
 else
-  log "WARNING: NVIDIA Vulkan ICD ($DEFAULT_ICD) not found. Check that the driver installed correctly."
+  log "WARNING: Vulkan ICD not found at $DEFAULT_ICD"
 fi
 
-log "Testing nvidia-smi and vulkaninfo --summary"
-if command -v nvidia-smi >/dev/null 2>&1; then
-  if ! nvidia-smi >/dev/null 2>&1; then
-    log "WARNING: nvidia-smi failed; a reboot may be required."
-  fi
-else
-  log "WARNING: nvidia-smi missing; install NVIDIA drivers manually."
+log "Testing nvidia-smi"
+if ! nvidia-smi >/dev/null 2>&1; then
+  log "WARNING: nvidia-smi failed (reboot may be required)."
 fi
 
 if command -v vulkaninfo >/dev/null 2>&1; then
   if ! vulkaninfo --summary >/dev/null 2>&1; then
-    log "WARNING: vulkaninfo failed. Check driver/ICD installation."
+    log "WARNING: vulkaninfo failed."
   fi
 else
-  log "WARNING: vulkaninfo missing despite vulkan-utils install."
+  log "WARNING: vulkaninfo missing."
 fi
 
-log "All done. If drivers were installed/updated, reboot before launching CARLA."
+log "All done. Reboot if the driver was updated, then run scripts/2-start-carla.sh"
