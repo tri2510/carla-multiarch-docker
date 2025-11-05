@@ -186,6 +186,14 @@ spawn_vehicle() {
   "$HELPER_PY" --spawn "$vehicle_id" --view "$view"
 }
 
+# Ensure hero vehicle is Tesla Model 3 before manual control
+ensure_default_vehicle() {
+  echo "Ensuring hero vehicle is vehicle.tesla.model3..."
+  if ! "$HELPER_PY" --spawn vehicle.tesla.model3 --respawn-hero --view chase >/dev/null 2>&1; then
+    echo "⚠️  Failed to spawn Tesla Model 3; manual control may attach to an existing vehicle."
+  fi
+}
+
 # Manual control helpers
 launch_wheel_manual() {
   local wheel_config="${CARLA_WHEEL_CONFIG:-}"
@@ -214,6 +222,7 @@ launch_wheel_manual() {
       return
     fi
   fi
+  ensure_default_vehicle
   echo "Controls (wheel buttons):"
   echo "  • Circle: handbrake"
   echo "  • Right paddle: toggle reverse"
@@ -261,6 +270,7 @@ launch_keyboard_manual() {
   echo "Press any key to start..."
   read -n 1 -s
   echo ""
+  ensure_default_vehicle
   "$HELPER_PY" --manual
 }
 
