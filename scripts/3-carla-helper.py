@@ -250,7 +250,7 @@ def run_manual_control(extra_args: Optional[List[str]], wheel: bool = False, whe
         forwarded = list(extra_args)
         if forwarded and forwarded[0] == "--":
             forwarded = forwarded[1:]
-    manual_filter = os.environ.get("CARLA_MANUAL_FILTER", "")
+    manual_filter = os.environ.get("CARLA_MANUAL_FILTER", "vehicle.tesla.model3")
     if manual_filter and "--filter" not in forwarded:
         forwarded = ["--filter", manual_filter, *forwarded]
 

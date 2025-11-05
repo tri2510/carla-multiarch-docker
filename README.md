@@ -59,9 +59,9 @@ scripts/3-carla-helper.sh --manual  # Drive with keyboard/wheel
 
 Need wheel support? Menu option 7 (or `scripts/3-carla-helper.sh --manual-wheel`)
 uses the Logitech profile described in [docs/LOGITECH_WHEEL.md](docs/LOGITECH_WHEEL.md),
-including optional mappings for the H-pattern shifter. If you want
-`manual_control.py` to only spawn a specific blueprint when you press Backspace,
-export `CARLA_MANUAL_FILTER=vehicle.some_model` before running the helper.
+including optional mappings for the H-pattern shifter. Manual control defaults
+to the Model 3 (`vehicle.tesla.model3`); override it by exporting
+`CARLA_MANUAL_FILTER=vehicle.some_model` before running the helper.
 ```
 
 ### Customizing Startup
