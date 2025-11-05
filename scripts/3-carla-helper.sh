@@ -174,6 +174,43 @@ spawn_vehicle() {
   "$HELPER_PY" --spawn "$vehicle_id" --view "$view"
 }
 
+# Manual control submenu
+manual_control_menu() {
+  echo ""
+  echo "Manual control input:"
+  echo "  1) Keyboard/Mouse (default)"
+  echo "  2) Logitech G29/G923 wheel"
+  echo ""
+  echo -n "Select input (1-2, default 1): "
+  read -r input_choice
+
+  case $input_choice in
+    2)
+      echo ""
+      echo "Wheel config:"
+      echo "  • Leave blank to use scripts/wheel-config-g29.ini"
+      echo "  • Provide a full path to reuse another config file"
+      echo -n "wheel_config.ini path (optional): "
+      read -r wheel_config
+      if [[ -n "$wheel_config" ]]; then
+        if [[ ! -f "$wheel_config" ]]; then
+          echo "File not found: $wheel_config"
+          return
+        fi
+        "$HELPER_PY" --manual-wheel --wheel-config "$wheel_config"
+      else
+        "$HELPER_PY" --manual-wheel
+      fi
+      ;;
+    ""|1)
+      "$HELPER_PY" --manual
+      ;;
+    *)
+      echo "Invalid option"
+      ;;
+  esac
+}
+
 # Camera view submenu
 move_camera() {
   echo ""
@@ -345,17 +382,12 @@ interactive_mode() {
         echo "  Manual Control"
         echo "=========================================="
         echo ""
-        echo "Controls:"
-        echo "  W/S         - Throttle/Brake"
-        echo "  A/D         - Steer left/right"
-        echo "  Space       - Handbrake"
-        echo "  Q or ESC    - Exit manual control"
-        echo ""
-        echo "Press any key to start..."
+        echo "Use keyboard or Logitech wheel/pedals for control."
+        echo "Press any key to choose input..."
         read -n 1 -s
         echo ""
 
-        "$HELPER_PY" --manual
+        manual_control_menu
 
         # Auto-return to menu after manual control exits
         echo ""

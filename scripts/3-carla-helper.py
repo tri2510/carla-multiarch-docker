@@ -21,6 +21,7 @@ import random
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable, List, Optional
 
@@ -29,6 +30,8 @@ CARLA_ROOT = Path(__file__).resolve().parents[1] / "local_carla"
 PY_API_DIST = CARLA_ROOT / "PythonAPI" / "carla" / "dist"
 PY_API_SOURCE = CARLA_ROOT / "PythonAPI" / "carla"
 EXAMPLES_DIR = CARLA_ROOT / "PythonAPI" / "examples"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_WHEEL_TEMPLATE = PROJECT_ROOT / "scripts" / "wheel-config-g29.ini"
 
 
 def ensure_carla_on_path() -> None:
@@ -95,7 +98,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weather", choices=sorted(WEATHER_PRESETS.keys()), help="Apply a predefined weather preset")
     parser.add_argument("--view", choices=VIEW_CHOICES, help="Move spectator to a common viewpoint")
     parser.add_argument("--manual", action="store_true", help="Launch PythonAPI/examples/manual_control.py")
-    parser.add_argument("--manual-args", nargs=argparse.REMAINDER, help="Arguments forwarded to manual_control.py after --")
+    parser.add_argument("--manual-wheel", action="store_true", help="Launch steering wheel controller (manual_control_steeringwheel.py)")
+    parser.add_argument("--wheel-config", help="Optional path to wheel_config.ini when using --manual-wheel")
+    parser.add_argument("--manual-args", nargs=argparse.REMAINDER, help="Arguments forwarded to manual control script after --")
     parser.add_argument("--role-name", default=DEFAULT_ROLE_NAME, help="Vehicle role_name to manage (default hero)")
     parser.add_argument("--spawn-index", type=int, default=-1, help="Spawn point index to use (default random)")
 
@@ -195,24 +200,70 @@ def set_view(world: carla.World, hero: Optional[carla.Vehicle], mode: str) -> No
     print(f"Moved spectator to {mode} view")
 
 
-def run_manual_control(extra_args: Optional[List[str]]) -> None:
-    manual = EXAMPLES_DIR / "manual_control.py"
-    if not manual.exists():
-        raise RuntimeError(f"manual_control.py not found at {manual}")
+@contextmanager
+def _maybe_override_wheel_config(config_path: Path):
+    if not config_path.exists():
+        raise RuntimeError(f"wheel config not found: {config_path}")
+    target = EXAMPLES_DIR / "wheel_config.ini"
+    backup_bytes: Optional[bytes] = None
+    if target.exists():
+        backup_bytes = target.read_bytes()
+    target.write_bytes(config_path.read_bytes())
+    try:
+        yield
+    finally:
+        if backup_bytes is None:
+            try:
+                target.unlink()
+            except FileNotFoundError:
+                pass
+        else:
+            target.write_bytes(backup_bytes)
+
+
+@contextmanager
+def _noop_context():
+    yield
+
+
+def ensure_default_wheel_config() -> Path:
+    if not DEFAULT_WHEEL_TEMPLATE.exists():
+        raise RuntimeError(
+            f"Default wheel template missing at {DEFAULT_WHEEL_TEMPLATE}; rerun git checkout or supply --wheel-config"
+        )
+    return DEFAULT_WHEEL_TEMPLATE
+
+
+def run_manual_control(extra_args: Optional[List[str]], wheel: bool = False, wheel_config: Optional[str] = None) -> None:
+    script_name = "manual_control_steeringwheel.py" if wheel else "manual_control.py"
+    script_path = EXAMPLES_DIR / script_name
+    if not script_path.exists():
+        raise RuntimeError(f"{script_name} not found at {script_path}")
     env = os.environ.copy()
     py_paths = [env.get("PYTHONPATH", ""), str(PY_API_SOURCE), str(PY_API_DIST)]
     env["PYTHONPATH"] = os.pathsep.join(filter(None, py_paths))
-    cmd = [sys.executable, str(manual)]
+    cmd = [sys.executable, str(script_path)]
     if extra_args:
         if extra_args and extra_args[0] == "--":
             extra_args = extra_args[1:]
         cmd.extend(extra_args)
-    print("[helper] Starting manual_control.py", " ".join(cmd))
-    subprocess.run(cmd, env=env, check=False)
+    cwd = str(EXAMPLES_DIR)
+    msg = "manual_control_steeringwheel.py" if wheel else "manual_control.py"
+    print(f"[helper] Starting {msg}", " ".join(cmd))
+    context = _noop_context()
+    if wheel:
+        if wheel_config:
+            context = _maybe_override_wheel_config(Path(wheel_config))
+        else:
+            ensure_default_wheel_config()
+    with context:
+        subprocess.run(cmd, env=env, cwd=cwd, check=False)
 
 
 def main() -> None:
     args = parse_args()
+    if args.wheel_config and not args.manual_wheel:
+        raise RuntimeError("--wheel-config requires --manual-wheel")
     client = connect(args.host, args.port, args.timeout)
 
     if args.list_maps:
@@ -267,8 +318,12 @@ def main() -> None:
     if args.view:
         set_view(world, hero, args.view)
 
-    if args.manual:
-        run_manual_control(args.manual_args)
+    if args.manual or args.manual_wheel:
+        run_manual_control(
+            args.manual_args,
+            wheel=args.manual_wheel,
+            wheel_config=args.wheel_config,
+        )
 
     if not any([
         args.list_maps,
@@ -280,6 +335,7 @@ def main() -> None:
         args.weather,
         args.view,
         args.manual,
+        args.manual_wheel,
     ]):
         print("No actions requested; use --help for options.")
 
