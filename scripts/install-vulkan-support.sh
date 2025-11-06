@@ -70,9 +70,9 @@ if command -v mokutil >/dev/null 2>&1; then
       log ""
       log "Enrolling MOK key for next reboot..."
       log ""
-      log "Enter MOK enrollment password (press Enter for default: carla123):"
+      log "Enter MOK enrollment password (press Enter for default: OpenSourceDesktop):"
       read -r -p "[MOK password]: " MOK_PASSWORD
-      MOK_PASSWORD="${MOK_PASSWORD:-carla123}"
+      MOK_PASSWORD="${MOK_PASSWORD:-OpenSourceDesktop}"
 
       log ""
       log "Using password: $MOK_PASSWORD"
