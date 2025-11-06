@@ -35,6 +35,78 @@ DEFAULT_WHEEL_TEMPLATE = PROJECT_ROOT / "scripts" / "wheel-config-g29.ini"
 WHEEL_WRAPPER = PROJECT_ROOT / "scripts" / "manual_control_wheel_extended.py"
 
 
+def find_carla_egg() -> Optional[Path]:
+    """Find the CARLA egg file in the distribution directory."""
+    if not CARLA_ROOT.exists():
+        return None
+    eggs = sorted(PY_API_DIST.glob("carla-*.egg"))
+    return eggs[-1] if eggs else None
+
+
+def extract_required_python_version(egg_path: Path) -> Optional[str]:
+    """Extract required Python version from egg filename.
+
+    Example: carla-0.9.15-py3.7-linux-x86_64.egg -> 3.7
+    """
+    import re
+    match = re.search(r'-py(\d+\.\d+)-', egg_path.name)
+    return match.group(1) if match else None
+
+
+def find_compatible_python(required_version: str) -> Optional[str]:
+    """Find a Python executable that matches the required version."""
+    import shutil
+    candidates = [
+        f"python{required_version}",
+        f"python{required_version.replace('.', '')}",
+        "python3",
+    ]
+    for candidate in candidates:
+        exe = shutil.which(candidate)
+        if exe:
+            return exe
+    return None
+
+
+def check_python_compatibility() -> None:
+    """Check if current Python version matches CARLA requirements.
+
+    If mismatch detected, re-execute with compatible Python version.
+    """
+    egg_path = find_carla_egg()
+    if not egg_path:
+        print("[helper] local_carla directory is missing; run scripts/1-setup-carla.sh first", file=sys.stderr)
+        sys.exit(2)
+
+    required_version = extract_required_python_version(egg_path)
+    if not required_version:
+        # Can't determine version from filename, continue anyway
+        return
+
+    current_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+
+    if current_version != required_version:
+        # Check if we've already tried re-executing
+        if os.environ.get("_CARLA_HELPER_REEXEC") == "1":
+            print(f"[helper] ERROR: CARLA requires Python {required_version}, but you have Python {current_version}", file=sys.stderr)
+            print(f"[helper] Install Python {required_version} with:", file=sys.stderr)
+            print(f"[helper]   sudo ./scripts/install-python{required_version.replace('.', '')}.sh", file=sys.stderr)
+            sys.exit(2)
+
+        # Try to find compatible Python
+        compat_python = find_compatible_python(required_version)
+        if compat_python:
+            print(f"[helper] Re-executing with {compat_python} (required by {egg_path.name})", file=sys.stderr)
+            env = os.environ.copy()
+            env["_CARLA_HELPER_REEXEC"] = "1"
+            os.execvpe(compat_python, [compat_python] + sys.argv, env)
+        else:
+            print(f"[helper] ERROR: CARLA requires Python {required_version}, but you have Python {current_version}", file=sys.stderr)
+            print(f"[helper] Install Python {required_version} with:", file=sys.stderr)
+            print(f"[helper]   sudo ./scripts/install-python{required_version.replace('.', '')}.sh", file=sys.stderr)
+            sys.exit(2)
+
+
 def ensure_carla_on_path() -> None:
     if not CARLA_ROOT.exists():
         print("[helper] local_carla directory is missing; run scripts/1-setup-carla.sh first", file=sys.stderr)
@@ -47,6 +119,7 @@ def ensure_carla_on_path() -> None:
     sys.path.append(str(PY_API_SOURCE))
 
 
+check_python_compatibility()
 ensure_carla_on_path()
 
 try:
@@ -243,7 +316,12 @@ def run_manual_control(extra_args: Optional[List[str]], wheel: bool = False, whe
     if not script_path.exists():
         raise RuntimeError(f"{script_name} not found at {script_path}")
     env = os.environ.copy()
-    py_paths = [env.get("PYTHONPATH", ""), str(PY_API_SOURCE), str(PY_API_DIST)]
+    # Find the CARLA egg file and add to PYTHONPATH
+    egg_path = find_carla_egg()
+    if egg_path:
+        py_paths = [env.get("PYTHONPATH", ""), str(PY_API_SOURCE), str(egg_path)]
+    else:
+        py_paths = [env.get("PYTHONPATH", ""), str(PY_API_SOURCE), str(PY_API_DIST)]
     env["PYTHONPATH"] = os.pathsep.join(filter(None, py_paths))
     forwarded: List[str] = []
     if extra_args:
@@ -254,7 +332,16 @@ def run_manual_control(extra_args: Optional[List[str]], wheel: bool = False, whe
     if manual_filter and "--filter" not in forwarded:
         forwarded = ["--filter", manual_filter, *forwarded]
 
-    cmd = [sys.executable, str(script_path), *forwarded]
+    # Use compatible Python version
+    python_exe = sys.executable
+    if egg_path:
+        required_version = extract_required_python_version(egg_path)
+        if required_version:
+            compat_python = find_compatible_python(required_version)
+            if compat_python:
+                python_exe = compat_python
+
+    cmd = [python_exe, str(script_path), *forwarded]
     cwd = str(EXAMPLES_DIR)
     msg = "manual_control_steeringwheel.py" if wheel else "manual_control.py"
     print(f"[helper] Starting {msg}", " ".join(cmd))
