@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 """Simple CARLA telemetry demo: prints vehicle pose and control each tick."""
 
 import sys
