@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 """Step 3: CARLA Helper - Manage Running CARLA Session
 
 This helper lets you control a running CARLA simulator (started with 2-start-carla.sh).

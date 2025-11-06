@@ -8,6 +8,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 HELPER_PY="$SCRIPT_DIR/3-carla-helper.py"
 
+# Check for Python 3.7
+PYTHON_CMD=""
+for py in python3.7 python37 python3; do
+  if command -v "$py" >/dev/null 2>&1; then
+    PYTHON_CMD="$py"
+    break
+  fi
+done
+
+if [[ -z "$PYTHON_CMD" ]]; then
+  echo "Error: Python 3 not found. Please install python3.7"
+  exit 1
+fi
+
 # Common keyboard shortcuts shown before launching manual control
 print_keyboard_shortcuts() {
   echo "Keyboard shortcuts:"
@@ -86,7 +100,7 @@ select_map() {
   echo "Available maps:"
 
   # Get maps and store in array (use --raw for clean output)
-  mapfile -t maps < <("$HELPER_PY" --list-maps --raw)
+  mapfile -t maps < <("$PYTHON_CMD" "$HELPER_PY" --list-maps --raw)
 
   # Display with numbers
   local i=1
@@ -108,7 +122,7 @@ select_map() {
     local selected_map="${maps[$((map_choice - 1))]}"
     echo ""
     echo "Loading $(echo "$selected_map" | sed 's|/Game/Carla/Maps/||')..."
-    "$HELPER_PY" --set-map "$selected_map"
+    "$PYTHON_CMD" "$HELPER_PY" --set-map "$selected_map"
     if [ $? -eq 0 ]; then
       echo "✓ Map changed successfully!"
     else
@@ -138,16 +152,16 @@ select_weather() {
   read -r weather_choice
 
   case $weather_choice in
-    1) "$HELPER_PY" --weather ClearNoon ;;
-    2) "$HELPER_PY" --weather ClearSunset ;;
-    3) "$HELPER_PY" --weather CloudyNoon ;;
-    4) "$HELPER_PY" --weather CloudySunset ;;
-    5) "$HELPER_PY" --weather WetNoon ;;
-    6) "$HELPER_PY" --weather WetSunset ;;
-    7) "$HELPER_PY" --weather HardRainNoon ;;
-    8) "$HELPER_PY" --weather HardRainSunset ;;
-    9) "$HELPER_PY" --weather SoftRainNoon ;;
-    10) "$HELPER_PY" --weather SoftRainSunset ;;
+    1) "$PYTHON_CMD" "$HELPER_PY" --weather ClearNoon ;;
+    2) "$PYTHON_CMD" "$HELPER_PY" --weather ClearSunset ;;
+    3) "$PYTHON_CMD" "$HELPER_PY" --weather CloudyNoon ;;
+    4) "$PYTHON_CMD" "$HELPER_PY" --weather CloudySunset ;;
+    5) "$PYTHON_CMD" "$HELPER_PY" --weather WetNoon ;;
+    6) "$PYTHON_CMD" "$HELPER_PY" --weather WetSunset ;;
+    7) "$PYTHON_CMD" "$HELPER_PY" --weather HardRainNoon ;;
+    8) "$PYTHON_CMD" "$HELPER_PY" --weather HardRainSunset ;;
+    9) "$PYTHON_CMD" "$HELPER_PY" --weather SoftRainNoon ;;
+    10) "$PYTHON_CMD" "$HELPER_PY" --weather SoftRainSunset ;;
     b) return ;;
     *) echo "Invalid choice" ;;
   esac
@@ -202,7 +216,7 @@ spawn_vehicle() {
     *) view="chase" ;;
   esac
 
-  "$HELPER_PY" --spawn "$vehicle_id" --view "$view"
+  "$PYTHON_CMD" "$HELPER_PY" --spawn "$vehicle_id" --view "$view"
 }
 
 # Check for hero vehicle before manual control
@@ -210,7 +224,7 @@ ensure_default_vehicle() {
   local blueprint="${CARLA_MANUAL_FILTER:-}"
   if [[ -n "$blueprint" ]]; then
     echo "Ensuring hero vehicle is $blueprint..."
-    if ! "$HELPER_PY" --spawn "$blueprint" --respawn-hero --view chase >/dev/null 2>&1; then
+    if ! "$PYTHON_CMD" "$HELPER_PY" --spawn "$blueprint" --respawn-hero --view chase >/dev/null 2>&1; then
       echo "⚠️  Failed to spawn $blueprint; manual control may attach to an existing vehicle."
     fi
   else
@@ -262,13 +276,13 @@ launch_wheel_manual() {
 
   if [[ -n "$wheel_config" ]]; then
     if [[ -f "$wheel_config" ]]; then
-      "$HELPER_PY" --manual-wheel --wheel-config "$wheel_config"
+      "$PYTHON_CMD" "$HELPER_PY" --manual-wheel --wheel-config "$wheel_config"
     else
       echo "WARNING: CARLA_WHEEL_CONFIG=$wheel_config not found. Using default profile."
-      "$HELPER_PY" --manual-wheel
+      "$PYTHON_CMD" "$HELPER_PY" --manual-wheel
     fi
   else
-    "$HELPER_PY" --manual-wheel
+    "$PYTHON_CMD" "$HELPER_PY" --manual-wheel
   fi
 }
 
@@ -290,7 +304,7 @@ launch_keyboard_manual() {
   read -n 1 -s
   echo ""
   ensure_default_vehicle
-  "$HELPER_PY" --manual
+  "$PYTHON_CMD" "$HELPER_PY" --manual
 }
 
 # Camera view submenu
@@ -306,10 +320,10 @@ move_camera() {
   read -r view_choice
 
   case $view_choice in
-    1) "$HELPER_PY" --view chase ;;
-    2) "$HELPER_PY" --view front ;;
-    3) "$HELPER_PY" --view top ;;
-    4) "$HELPER_PY" --view free ;;
+    1) "$PYTHON_CMD" "$HELPER_PY" --view chase ;;
+    2) "$PYTHON_CMD" "$HELPER_PY" --view front ;;
+    3) "$PYTHON_CMD" "$HELPER_PY" --view top ;;
+    4) "$PYTHON_CMD" "$HELPER_PY" --view free ;;
     b) return ;;
     *) echo "Invalid choice" ;;
   esac
@@ -426,7 +440,7 @@ interactive_mode() {
     case $choice in
       1)
         echo ""
-        "$HELPER_PY" --list-maps
+        "$PYTHON_CMD" "$HELPER_PY" --list-maps
         echo ""
         echo "Press any key to return to menu..."
         read -n 1 -s
@@ -448,7 +462,7 @@ interactive_mode() {
         ;;
       5)
         echo ""
-        "$HELPER_PY" --list-vehicles
+        "$PYTHON_CMD" "$HELPER_PY" --list-vehicles
         echo ""
         echo "Press any key to return to menu..."
         read -n 1 -s
@@ -488,14 +502,14 @@ interactive_mode() {
 }
 
 # Check if Python helper exists
-if [[ ! -x "$HELPER_PY" ]]; then
+if [[ ! -f "$HELPER_PY" ]]; then
   echo "Error: Python helper not found at $HELPER_PY"
   exit 1
 fi
 
 # If arguments provided, pass through to Python helper
 if [[ $# -gt 0 ]]; then
-  exec "$HELPER_PY" "$@"
+  exec "$PYTHON_CMD" "$HELPER_PY" "$@"
 else
   # No arguments, run interactive mode
   interactive_mode
