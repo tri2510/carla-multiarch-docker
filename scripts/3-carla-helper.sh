@@ -205,12 +205,16 @@ spawn_vehicle() {
   "$HELPER_PY" --spawn "$vehicle_id" --view "$view"
 }
 
-# Ensure hero vehicle is Tesla Model 3 before manual control
+# Check for hero vehicle before manual control
 ensure_default_vehicle() {
-  local blueprint="${CARLA_MANUAL_FILTER:-vehicle.tesla.model3}"
-  echo "Ensuring hero vehicle is $blueprint..."
-  if ! "$HELPER_PY" --spawn "$blueprint" --respawn-hero --view chase >/dev/null 2>&1; then
-    echo "⚠️  Failed to spawn $blueprint; manual control may attach to an existing vehicle."
+  local blueprint="${CARLA_MANUAL_FILTER:-}"
+  if [[ -n "$blueprint" ]]; then
+    echo "Ensuring hero vehicle is $blueprint..."
+    if ! "$HELPER_PY" --spawn "$blueprint" --respawn-hero --view chase >/dev/null 2>&1; then
+      echo "⚠️  Failed to spawn $blueprint; manual control may attach to an existing vehicle."
+    fi
+  else
+    echo "Manual control will attach to existing hero vehicle (or spawn random if none exists)."
   fi
 }
 
