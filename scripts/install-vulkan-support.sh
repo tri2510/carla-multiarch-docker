@@ -69,15 +69,23 @@ if command -v mokutil >/dev/null 2>&1; then
     else
       log ""
       log "Enrolling MOK key for next reboot..."
-      log "You will be prompted to create a password."
+      log ""
+      log "Enter MOK enrollment password (press Enter for default: carla123):"
+      read -r -p "[MOK password]: " MOK_PASSWORD
+      MOK_PASSWORD="${MOK_PASSWORD:-carla123}"
+
+      log ""
+      log "Using password: $MOK_PASSWORD"
       log "Remember this password - you'll need it during reboot!"
       log ""
 
-      if mokutil --import "$MOK_CERT"; then
+      if echo "$MOK_PASSWORD" | mokutil --import "$MOK_CERT"; then
         log ""
         log "=========================================="
         log "  MOK Enrollment Prepared"
         log "=========================================="
+        log ""
+        log "MOK Password: $MOK_PASSWORD"
         log ""
         log "Next steps:"
         log "1. Reboot your computer: sudo reboot"
@@ -85,7 +93,7 @@ if command -v mokutil >/dev/null 2>&1; then
         log "3. Select 'Enroll MOK'"
         log "4. Select 'Continue'"
         log "5. Select 'Yes'"
-        log "6. Enter the password you just created"
+        log "6. Enter password: $MOK_PASSWORD"
         log "7. Select 'Reboot'"
         log ""
         log "After reboot, the NVIDIA driver will work with Secure Boot."
